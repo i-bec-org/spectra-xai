@@ -1,0 +1,45 @@
+# Always prefer setuptools over distutils
+from setuptools import setup, find_packages
+
+# To use a consistent encoding
+from codecs import open
+from os import path
+
+# The directory containing this file
+HERE = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
+    long_description = f.read()
+
+# This call to setup() does all the work
+setup(
+    name="spectra-xai",
+    version="0.1.0",
+    description="Library",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://www.i-bec.org/",
+    author="",
+    author_email="",
+    license="",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+    python_requires=">=3.6",
+    install_requires=[
+        "ast",
+        "pandas",
+        "time",
+        "numpy",
+        "enum",
+        "numbers",
+        "scipy",
+        "typing",
+        "sklearn",
+    ],
+)
