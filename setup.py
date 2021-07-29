@@ -32,14 +32,9 @@ setup(
     packages=find_packages(where="src"),
     python_requires=">=3.6",
     install_requires=[
-        "ast",
         "pandas",
-        "time",
         "numpy",
-        "enum",
-        "numbers",
         "scipy",
-        "typing",
         "sklearn",
     ],
 )
