@@ -631,7 +631,6 @@ class StandardModel:
             res["feature_importance"] = model.feature_importances_
         res["TrainingTime"] = trn_t1 - trn_t0
         res["TestingTime"] = tst_t1 - tst_t0
-        # self.dataFrame.loc[len(self.dataFrame)] = res
         return res
 
     def train_with_sequence(
