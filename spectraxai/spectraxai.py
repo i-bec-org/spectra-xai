@@ -343,46 +343,17 @@ class Dataset:
             get_params = []
             get_attributes = []
             for i in range(X.shape[2]):
-                if len(set_params) != 0:
-                    scaler[i] = scaler[i].set_params(**set_params[i])
-                get_params.append(scaler[i].get_params())
-                if method == Scale.STANDARD:
-                    if len(set_attributes) != 0:
-                        scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
-                    else:
-                        scaler[i] = scaler[i].fit(X[:, :, i])
-                    X[:, :, i] = scaler[i].transform(X[:, :, i])
-                    get_attributes.append(Dataset.__get_scale_attributes(method, scaler[i]))
-                elif method == Scale.MINMAX:
-                    if len(set_attributes) != 0:
-                        scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
-                    else:
-                        scaler[i] = scaler[i].fit(X[:, :, i])
-                    X[:, :, i] = scaler[i].transform(X[:, :, i])
-                    get_attributes.append(Dataset.__get_scale_attributes(method, scaler[i]))
+                X[:, :, i], params, attributes = Dataset.__scale_X(X[:, :, i], method, scaler[i], set_params[i], set_attributes[i])
+                get_params.append(params)
+                get_attributes.append(attributes)
         else:
             if method == Scale.STANDARD:
                 scaler = StandardScaler()
-                if len(set_params) != 0:
-                    scaler = scaler.set_params(**set_params[0])
-                if len(set_attributes) != 0:
-                    scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-                else:
-                    scaler = scaler.fit(X)
-                X = scaler.transform(X)
-                get_params = [scaler.get_params()]
-                get_attributes = [Dataset.__get_scale_attributes(method, scaler)]
             elif method == Scale.MINMAX:
                 scaler = MinMaxScaler()
-                if len(set_params) != 0:
-                    scaler = scaler.set_params(**set_params[0])
-                if len(set_attributes) != 0:
-                    scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-                else:
-                    scaler = scaler.fit(X)
-                X = scaler.transform(X)
-                get_params = [scaler.get_params()]
-                get_attributes = [Dataset.__get_scale_attributes(method, scaler)]
+            X, params, attributes = Dataset.__scale_X(X, method, scaler, set_params[0], set_attributes[0])
+            get_params = [params]
+            get_attributes = [attributes]
         return X, {"params": get_params, "attributes": get_attributes}
 
     def unscale_Y(
@@ -489,6 +460,27 @@ class Dataset:
                 "data_max_": scaler.data_max_,
                 "data_range_": scaler.data_range_
             }
+
+    @staticmethod
+    def __scale_X(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+        if len(set_params) != 0:
+            scaler = scaler.set_params(**set_params)
+        get_params = scaler.get_params()
+        if method == Scale.STANDARD:
+            if len(set_attributes) != 0:
+                scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes)
+            else:
+                scaler = scaler.fit(X)
+            X = scaler.transform(X)
+            get_attributes = Dataset.__get_scale_attributes(method, scaler)
+        elif method == Scale.MINMAX:
+            if len(set_attributes) != 0:
+                scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes)
+            else:
+                scaler = scaler.fit(X)
+            X = scaler.transform(X)
+            get_attributes = Dataset.__get_scale_attributes(method, scaler)
+        return X, get_params, get_attributes
 
 
 class Model(str, Enum):
