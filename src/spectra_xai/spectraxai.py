@@ -2,19 +2,19 @@ import ast
 import pandas
 import time
 import numpy as np
-import utils.kennardStone as kennardStone
+import utils_xai.kennardStone as kennardStone
 from enum import Enum
 from numbers import Number
 from scipy.signal import savgol_filter
-from utils.continuumRemoval import continuum_removal
+from utils_xai.continuumRemoval import continuum_removal
 from typing import Union, Tuple, Dict, List
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import StandardScaler
-from utils.modelAssessment import metrics
-from utils.svrParams import sigest, estimateC
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from utils_xai.modelAssessment import metrics
+from utils_xai.svrParams import sigest, estimateC
 
 
 class SpectralPreprocessing(str, Enum):
@@ -125,6 +125,11 @@ class Spectra:
             raise RuntimeError
 
 
+class Scale(str, Enum):
+    STANDARD = "standard"
+    MINMAX = "min-max"
+
+
 class DatasetSplit(str, Enum):
     """DatasetSplit class"""
 
@@ -151,8 +156,8 @@ class Dataset:
             raise AssertionError("X and Y don't have the same number of rows!")
         if X.ndim != 2:
             raise AssertionError("X should have exactly two dimensions")
-        self.X = X.to_numpy() if isinstance(X, pd.DataFrame) else X
-        if isinstance(Y, pd.DataFrame) or isinstance(Y, pd.Series):
+        self.X = X.to_numpy() if isinstance(X, pandas.DataFrame) else X
+        if isinstance(Y, pandas.DataFrame) or isinstance(Y, pandas.Series):
             Y = Y.to_numpy()
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
 
@@ -202,6 +207,140 @@ class Dataset:
             thisX = np.copy(self.X)
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
+
+    def scale_X(self, method: Scale, set_params: List = []):
+        self.X, self.get_scale_X_params = Dataset.scale_X(self.X, method, set_params)
+        return self
+    
+    def scale_X(X: np.ndarray, method: Scale, set_params: List = []):
+        if X.ndim == 3:
+            if method == Scale.STANDARD:
+                scaler = [StandardScaler() for _ in range(X.shape[2])]
+            elif method == Scale.MINMAX:
+                scaler = [MinMaxScaler() for _ in range(X.shape[2])]
+            get_params = []
+            for i in range(X.shape[2]):
+                if method == Scale.STANDARD:
+                    if len(set_params) != 0:
+                        scaler[i].scale_ = set_params[i]["scale_"]
+                        scaler[i].mean_ = set_params[i]["mean_"]
+                        scaler[i].var_ = set_params[i]["var_"]
+                        scaler[i].n_samples_seen_ = set_params[i]["n_samples_seen_"]
+                    else:
+                        scaler[i] = scaler[i].fit(X[:, :, i])
+                    X[:, :, i] = scaler[i].transform(X[:, :, i])
+                    get_params.append(
+                        {
+                            "scale_": scaler[i].scale_,
+                            "mean_": scaler[i].mean_,
+                            "var_": scaler[i].var_,
+                            "n_samples_seen_": scaler[i].n_samples_seen_,
+                        }
+                    )
+                elif method == Scale.MINMAX:
+                    if len(set_params) != 0:
+                        scaler[i].min_ = set_params[i]["min_"]
+                        scaler[i].scale_ = set_params[i]["scale_"]
+                        scaler[i].data_min_ = set_params[i]["data_min_"]
+                        scaler[i].data_max_ = set_params[i]["data_max_"]
+                        scaler[i].data_range_ = set_params[i]["data_range_"]
+                    else:
+                        scaler[i] = scaler[i].fit(X[:, :, i])
+                    X[:, :, i] = scaler[i].transform(X[:, :, i])
+                    get_params.append(
+                        {
+                            "min_": scaler[i].min_,
+                            "scale_": scaler[i].scale_,
+                            "data_min_": scaler[i].data_min_,
+                            "data_max_": scaler[i].data_max_,
+                            "data_range_": scaler[i].data_range,
+                        }
+                    )
+        else:
+            if method == Scale.STANDARD:
+                scaler = StandardScaler()
+                if len(set_params) != 0:
+                    scaler.scale_ = set_params[0]["scale_"]
+                    scaler.mean_ = set_params[0]["mean_"]
+                    scaler.var_ = set_params[0]["var_"]
+                    scaler.n_samples_seen_ = set_params[0]["n_samples_seen_"]
+                else:
+                    scaler = scaler.fit(X)
+                X = scaler.transform(X)
+                get_params = [
+                    {
+                        "scale_": scaler.scale_,
+                        "mean_": scaler.mean_,
+                        "var_": scaler.var_,
+                        "n_samples_seen_": scaler.n_samples_seen_,
+                    }
+                ]
+            elif method == Scale.MINMAX:
+                scaler = MinMaxScaler()
+                if len(set_params) != 0:
+                    scaler.min_ = set_params[0]["min_"]
+                    scaler.scale_ = set_params[0]["scale_"]
+                    scaler.data_min_ = set_params[0]["data_min_"]
+                    scaler.data_max_ = set_params[0]["data_max_"]
+                    scaler.data_range_ = set_params[0]["data_range_"]
+                else:
+                    scaler = scaler.fit(X)
+                X = scaler.transform(X)
+                get_params = [
+                    {
+                        "min_": scaler.min_,
+                        "scale_": scaler.scale_,
+                        "data_min_": scaler.data_min_,
+                        "data_max_": scaler.data_max_,
+                        "data_range_": scaler.data_range_,
+                    }
+                ]
+        return X, get_params
+
+    def scale_Y(self, method: Scale, set_params: List = []):
+        self.Y, self.get_scale_Y_params = Dataset.scale_Y(self.Y, method, set_params)
+        return self
+    
+    def scale_Y(Y: np.ndarray, method: Scale, set_params: List = []):
+        if method == Scale.STANDARD:
+            scaler = StandardScaler()
+            if len(set_params) != 0:
+                scaler.scale_ = set_params[0]["scale_"]
+                scaler.mean_ = set_params[0]["mean_"]
+                scaler.var_ = set_params[0]["var_"]
+                scaler.n_samples_seen_ = set_params[0]["n_samples_seen_"]
+            else:
+                scaler = scaler.fit(Y)
+            Y = scaler.transform(Y)
+            get_params = [
+                {
+                    "scale_": scaler.scale_,
+                    "mean_": scaler.mean_,
+                    "var_": scaler.var_,
+                    "n_samples_seen_": scaler.n_samples_seen_,
+                }
+            ]
+        elif method == Scale.MINMAX:
+            scaler = MinMaxScaler()
+            if len(set_params) != 0:
+                scaler.min_ = set_params[0]["min_"]
+                scaler.scale_ = set_params[0]["scale_"]
+                scaler.data_min_ = set_params[0]["data_min_"]
+                scaler.data_max_ = set_params[0]["data_max_"]
+                scaler.data_range_ = set_params[0]["data_range_"]
+            else:
+                scaler = scaler.fit(Y)
+            Y = scaler.transform(Y)
+            get_params = [
+                {
+                    "min_": scaler.min_,
+                    "scale_": scaler.scale_,
+                    "data_min_": scaler.data_min_,
+                    "data_max_": scaler.data_max_,
+                    "data_range_": scaler.data_range_,
+                }
+            ]
+        return Y, get_params
 
     def __preprocess(self, X: np.ndarray, method: SpectralPreprocessingSequence):
         if isinstance(method, str):

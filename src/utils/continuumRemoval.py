@@ -1,20 +1,18 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull
 
 
-def continuum_removal(spectrum, wvs=[], make_plot=False):
-    mat = np.column_stack(
-        ([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0])
-    )
-    hull = ConvexHull(mat)
-    ids = np.array(sorted(hull.vertices)[1:-1]) - 1
-    cont = np.interp(wvs, np.array(wvs)[ids], spectrum[ids])
+def continuum_removal(spectrum: np.ndarray, wvs: list = []):
+    assert spectrum.ndim == 1 or spectrum.ndim == 2
+    
+    if not wvs:
+        wvs = list(range(len(spectrum)))
 
-    if make_plot:
-        plt.plot(mat[:, 0], mat[:, 1], "o")
-        for simplex in hull.simplices:
-            plt.plot(mat[simplex, 0], mat[simplex, 1], "k-")
-        plt.plot(wvs, spectrum / cont, "yo")
-
-    return spectrum / cont
+    if spectrum.ndim == 2:
+        return [continuum_removal(s) for s in spectrum]
+    else:
+        mat = np.column_stack(([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0]))
+        hull = ConvexHull(mat)
+        ids = np.array(sorted(hull.vertices)[1:-1]) - 1
+        cont = np.interp(wvs, np.array(wvs)[ids], spectrum[ids])
+        return spectrum / cont
