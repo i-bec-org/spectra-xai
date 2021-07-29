@@ -2,19 +2,19 @@ import ast
 import pandas
 import time
 import numpy as np
-import utils.kennardStone as kennardStone
+import spectraxai.utils.kennardStone as kennardStone
 from enum import Enum
 from numbers import Number
 from scipy.signal import savgol_filter
-from utils.continuumRemoval import continuum_removal
+from spectraxai.utils.continuumRemoval import continuum_removal
 from typing import Union, Tuple, Dict, List
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from utils.modelAssessment import metrics
-from utils.svrParams import sigest, estimateC
+from spectraxai.utils.modelAssessment import metrics
+from spectraxai.utils.svrParams import sigest, estimateC
 
 
 class SpectralPreprocessing(str, Enum):
@@ -592,7 +592,7 @@ class StandardModel:
             elif self.model == Model.PLS:
                 if not "n_components" in self.grid_search_hyperparameters:
                     self.grid_search_hyperparameters["n_components"] = np.arange(
-                        1, min(100, self.X.shape[1]), 1
+                        1, min(100, X.shape[1]), 1
                     )
                 model = PLSRegression()
             elif self.model == Model.RF:

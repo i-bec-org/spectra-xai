@@ -50,8 +50,8 @@ class TestStandardModelClass(unittest.TestCase):
             ],
         ]
         df = pandas.read_csv(os.path.join(DATA_FOLDER, "SSL_GR.csv"))
-        self.X, self.Y = df.loc[:, "350":"2500"], df.OM
-        self.idx_trn, self.idx_tst = np.arange(600), np.arange(600, self.X.shape[0])
+        self.X, self.Y = df.loc[:, "350":"2500":20], df.OM
+        self.idx_trn, self.idx_tst = np.arange(200), np.arange(200, self.X.shape[0])
 
     def test_wrong_params(self):
         self.assertRaises(
