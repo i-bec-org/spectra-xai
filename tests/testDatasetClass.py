@@ -1,7 +1,7 @@
 import unittest
-from spectra_xai import Dataset, DatasetSplit
-
-import unittest
+from .context import spectraxai
+from spectraxai import Dataset, DatasetSplit, SpectralPreprocessing
+import numpy as np
 
 
 class TestDatasetClass(unittest.TestCase):

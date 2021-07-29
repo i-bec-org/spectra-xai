@@ -36,5 +36,6 @@ setup(
         "numpy",
         "scipy",
         "sklearn",
+        "matplotlib"
     ],
 )

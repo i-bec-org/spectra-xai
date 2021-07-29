@@ -1,5 +1,9 @@
 import unittest
-from spectra_xai import StandardModel
+import os
+import pandas
+import numpy as np
+from .context import spectraxai, DATA_FOLDER
+from spectraxai import Model, StandardModel, SpectralPreprocessing
 
 
 class TestStandardModelClass(unittest.TestCase):
@@ -45,6 +49,9 @@ class TestStandardModelClass(unittest.TestCase):
                 SpectralPreprocessing.SNV,
             ],
         ]
+        df = pandas.read_csv(os.path.join(DATA_FOLDER, "SSL_GR.csv"))
+        self.X, self.Y = df.loc[:, "350":"2500"], df.OM
+        self.idx_trn, self.idx_tst = np.arange(600), np.arange(600, self.X.shape[0])
 
     def test_wrong_params(self):
         self.assertRaises(
@@ -73,50 +80,50 @@ class TestStandardModelClass(unittest.TestCase):
             {"max_features": ["log2", "auto"], "n_estimators": [50, 100]},
         )
         for model in self.models:
-            self.assertRaises(AssertionError, model.train, X, Y)
+            self.assertRaises(AssertionError, model.train, self.X, self.Y)
             self.assertRaises(
-                AssertionError, model.train, X, Y, SpectralPreprocessing.NONE
+                AssertionError, model.train, self.X, self.Y, SpectralPreprocessing.NONE
             )
-            self.assertRaises(AssertionError, model.train, X, Y, idx_trn=idx_trn)
-            self.assertRaises(AssertionError, model.train, X, Y, idx_tst=idx_tst)
+            self.assertRaises(AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn)
+            self.assertRaises(AssertionError, model.train, self.X, self.Y, idx_tst=self.idx_tst)
             self.assertRaises(
-                AssertionError, model.train, X, Y, idx_trn=idx_trn, idx_tst=idx_tst
+                AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn, idx_tst=self.idx_tst
             )
-            # model.train(X, Y, SpectralPreprocessing.NONE, idx_trn=idx_trn)
-            # model.train(X, Y, SpectralPreprocessing.NONE, idx_tst=idx_tst)
+            # model.train(self.X, self.Y, SpectralPreprocessing.NONE, idx_trn=self.idx_trn)
+            # model.train(self.X, self.Y, SpectralPreprocessing.NONE, idx_tst=self.idx_tst)
             self.assertRaises(
                 AssertionError,
                 model.train,
-                X,
-                Y,
+                self.X,
+                self.Y,
                 SpectralPreprocessing.NONE,
-                idx_trn=idx_trn,
-                idx_tst=idx_tst,
+                idx_trn=self.idx_trn,
+                idx_tst=self.idx_tst,
             )
 
-            self.assertRaises(AssertionError, model.train_with_sequence, X, Y)
+            self.assertRaises(AssertionError, model.train_with_sequence, self.X, self.Y)
             self.assertRaises(
-                AssertionError, model.train_with_sequence, X, Y, self.methods
+                AssertionError, model.train_with_sequence, self.X, self.Y, self.methods
             )
             self.assertRaises(
-                AssertionError, model.train_with_sequence, X, Y, idx_trn=idx_trn
+                AssertionError, model.train_with_sequence, self.X, self.Y, idx_trn=self.idx_trn
             )
             self.assertRaises(
-                AssertionError, model.train_with_sequence, X, Y, idx_tst=idx_tst
+                AssertionError, model.train_with_sequence, self.X, self.Y, idx_tst=self.idx_tst
             )
             self.assertRaises(
-                AssertionError, model.train, X, Y, idx_trn=idx_trn, idx_tst=idx_tst
+                AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn, idx_tst=self.idx_tst
             )
-            model.train_with_sequence(X, Y, self.methods, idx_trn=idx_trn)
-            # model.train_with_sequence(X, Y, self.methods, idx_tst=idx_tst)
+            model.train_with_sequence(self.X, self.Y, self.methods, idx_trn=self.idx_trn)
+            # model.train_with_sequence(self.X, self.Y, self.methods, idx_tst=self.idx_tst)
             self.assertRaises(
                 AssertionError,
                 model.train_with_sequence,
-                X,
-                Y,
+                self.X,
+                self.Y,
                 self.methods,
-                idx_trn=idx_trn,
-                idx_tst=idx_tst,
+                idx_trn=self.idx_trn,
+                idx_tst=self.idx_tst,
             )
 
 
