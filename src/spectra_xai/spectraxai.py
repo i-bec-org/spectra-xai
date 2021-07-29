@@ -208,6 +208,60 @@ class Dataset:
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
 
+    def unscale_X(
+        self, method: Scale, set_params: List = [], set_attributes: List = []
+    ):
+        self.X = Dataset.unscale_X(self.X, method, set_params, set_attributes)
+        return self
+
+    def unscale_X(
+        X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
+    ):
+        if len(set_attributes) == 0:
+            raise AssertionError("You need to specify set_attributes")
+        if X.ndim == 3:
+            if method == Scale.STANDARD:
+                scaler = [StandardScaler() for _ in range(X.shape[2])]
+            elif method == Scale.MINMAX:
+                scaler = [MinMaxScaler() for _ in range(X.shape[2])]
+            for i in range(X.shape[2]):
+                if len(set_params) != 0:
+                    scaler[i] = scaler[i].set_params(**set_params[i])
+                if method == Scale.STANDARD:
+                    scaler[i].scale_ = set_attributes[i]["scale_"]
+                    scaler[i].mean_ = set_attributes[i]["mean_"]
+                    scaler[i].var_ = set_attributes[i]["var_"]
+                    scaler[i].n_samples_seen_ = set_attributes[i]["n_samples_seen_"]
+                    X[:, :, i] = scaler[i].inverse_transform(X[:, :, i])
+                elif method == Scale.MINMAX:
+                    scaler[i].min_ = set_attributes[i]["min_"]
+                    scaler[i].scale_ = set_attributes[i]["scale_"]
+                    scaler[i].data_min_ = set_attributes[i]["data_min_"]
+                    scaler[i].data_max_ = set_attributes[i]["data_max_"]
+                    scaler[i].data_range_ = set_attributes[i]["data_range_"]
+                    X[:, :, i] = scaler[i].inverse_transform(X[:, :, i])
+        else:
+            if method == Scale.STANDARD:
+                scaler = StandardScaler()
+                if len(set_params) != 0:
+                    scaler = scaler.set_params(**set_params[0])
+                scaler.scale_ = set_attributes[0]["scale_"]
+                scaler.mean_ = set_attributes[0]["mean_"]
+                scaler.var_ = set_attributes[0]["var_"]
+                scaler.n_samples_seen_ = set_attributes[0]["n_samples_seen_"]
+                X = scaler.inverse_transform(X)
+            elif method == Scale.MINMAX:
+                scaler = MinMaxScaler()
+                if len(set_params) != 0:
+                    scaler = scaler.set_params(**set_params[0])
+                scaler.min_ = set_attributes[0]["min_"]
+                scaler.scale_ = set_attributes[0]["scale_"]
+                scaler.data_min_ = set_attributes[0]["data_min_"]
+                scaler.data_max_ = set_attributes[0]["data_max_"]
+                scaler.data_range_ = set_attributes[0]["data_range_"]
+                X = scaler.inverse_transform(X)
+        return X
+
     def scale_X(self, method: Scale, set_params: List = [], set_attributes: List = []):
         self.X, self.get_scale_X_params = Dataset.scale_X(
             self.X, method, set_params, set_attributes
@@ -310,6 +364,38 @@ class Dataset:
                     }
                 ]
         return X, {"params": get_params, "attributes": get_attributes}
+
+    def unscale_Y(
+        self, method: Scale, set_params: List = [], set_attributes: List = []
+    ):
+        self.Y = Dataset.unscale_Y(self.Y, method, set_params, set_attributes)
+        return self
+
+    def unscale_Y(
+        Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
+    ):
+        if len(set_attributes) == 0:
+            raise AssertionError("You need to specify set_attributes")
+        if method == Scale.STANDARD:
+            scaler = StandardScaler()
+            if len(set_params) != 0:
+                scaler = scaler.set_params(**set_params[0])
+            scaler.scale_ = set_attributes[0]["scale_"]
+            scaler.mean_ = set_attributes[0]["mean_"]
+            scaler.var_ = set_attributes[0]["var_"]
+            scaler.n_samples_seen_ = set_attributes[0]["n_samples_seen_"]
+            Y = scaler.inverse_transform(Y)
+        elif method == Scale.MINMAX:
+            scaler = MinMaxScaler()
+            if len(set_params) != 0:
+                scaler = scaler.set_params(**set_params[0])
+            scaler.min_ = set_attributes[0]["min_"]
+            scaler.scale_ = set_attributes[0]["scale_"]
+            scaler.data_min_ = set_attributes[0]["data_min_"]
+            scaler.data_max_ = set_attributes[0]["data_max_"]
+            scaler.data_range_ = set_attributes[0]["data_range_"]
+            Y = scaler.inverse_transform(Y)
+        return Y
 
     def scale_Y(self, method: Scale, set_params: List = [], set_attributes: List = []):
         self.Y, self.get_scale_Y_params = Dataset.scale_Y(
