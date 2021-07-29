@@ -111,4 +111,5 @@ class TestDatasetClass(unittest.TestCase):
         self.assertTrue(X.shape[2] == len(methods))
 
 
-unittest.main(argv=[""], verbosity=2, exit=False)
+if __name__ == "__main__":
+    unittest.main(argv=[""], verbosity=2, exit=False)
