@@ -2,23 +2,28 @@ import ast
 import pandas
 import time
 import numpy as np
-import spectraxai.utils.kennardStone as kennardStone
 from enum import Enum
 from numbers import Number
 from scipy.signal import savgol_filter
-from spectraxai.utils.continuumRemoval import continuum_removal
 from typing import Union, Tuple, Dict, List
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from spectraxai.utils.continuumRemoval import continuum_removal
 from spectraxai.utils.modelAssessment import metrics
 from spectraxai.utils.svrParams import sigest, estimateC
+import spectraxai.utils.kennardStone as kennardStone
 
 
 class SpectralPreprocessing(str, Enum):
-    """Spectral Preprocessing class"""
+    """
+    Spectral Preprocessing enum
+
+    A collection of different spectral pre-processing (or pre-treatments)
+    that may be applied to a spectral matrix.
+    """
 
     NONE = "no"
     REF = "reflectance"
@@ -55,7 +60,8 @@ class SpectralPreprocessing(str, Enum):
                 lst[i] = SpectralPreprocessing.__get_class(lst[i])
         return lst
 
-    def init_class(string):
+    def init_class(string: str):
+        """Initialize a SpectralPreprocessing object from its string representation"""
         lst = ast.literal_eval(
             string.replace("no", "'no'")
             .replace("reflectance", "'reflectance'")
@@ -80,9 +86,17 @@ SpectralPreprocessingSequence = List[
 
 
 class Spectra:
-    """Spectra class which apply preprocessing to input data."""
+    """
+    Spectra class to hold a 2-D spectral matrix.
+
+    Can accept a 1-D vector but always returns a 2-D matrix.
+    """
 
     def __init__(self, X: np.ndarray) -> None:
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        if X.ndim != 2:
+            raise AssertionError("X should a 2-D matrix")
         self.X = X
 
     def reflectance(self) -> np.ndarray:
@@ -94,6 +108,7 @@ class Spectra:
         return Spectra(-1 * np.log10(self.X))
 
     def snv(self) -> np.ndarray:
+        """Apply the standard normal variate transform"""
         snv = np.zeros(self.X.shape)
         mu, sd = self.X.mean(axis=-1), self.X.std(axis=-1, ddof=1)
         for i in range(np.shape(self.X)[0]):
@@ -101,12 +116,19 @@ class Spectra:
         return Spectra(snv)
 
     def sg(self, **kwargs) -> np.ndarray:
+        """
+        Apply a general Savitzky–Golay transform.
+
+        You need to pass as kwargs the parameters of scipy.signal.savgol_filter
+        """
         return Spectra(savgol_filter(self.X, **kwargs))
 
     def cr(self) -> np.ndarray:
+        """Transform using the Continuum Removal"""
         return Spectra(continuum_removal(self.X))
 
     def apply(self, method: SpectralPreprocessing, **kwargs) -> np.ndarray:
+        """Apply the transform specified by method"""
         if method == SpectralPreprocessing.REF:
             return self.reflectance()
         elif method == SpectralPreprocessing.ABS:
@@ -126,16 +148,29 @@ class Spectra:
 
 
 class Scale(str, Enum):
+    """Scaling of an input feature (or of the output) supported by the `Dataset` class"""
     STANDARD = "standard"
     MINMAX = "min-max"
+    
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.value
 
 
 class DatasetSplit(str, Enum):
-    """DatasetSplit class"""
+    """Types of dataset split supported by the `Dataset` class"""
 
     RANDOM = "random"
     KENNARD_STONE = "Kennard-Stone"
     CLHS = "clhs"
+    
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.value
 
 
 DataSplit = Tuple[
@@ -143,15 +178,33 @@ DataSplit = Tuple[
     np.ndarray,  # X_tst
     np.ndarray,  # Y_trn
     np.ndarray,  # Y_tst
-    np.array,  # idx_trn
-    np.array,  # idx_tst
+    np.ndarray,  # idx_trn
+    np.ndarray,  # idx_tst
 ]
+"""A tuple"""
 
 
 class Dataset:
-    """Dataset class manages the dataset"""
+    """
+    A general class to manage the dataset (i.e. X and Y).
+    
+    Use this class to pass your 2D spectral matrix and 1D or 2D output properties.
+    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more. 
+    """
 
     def __init__(self, X: np.ndarray, Y: np.ndarray):
+        """
+        
+        Parameters
+        ----------
+        
+        X: `numpy.ndarray`
+            A 2D matrix of the spectra
+        
+        Y: `numpy.ndarray`
+            A 1D vector or 2D matrix of the output property(ies).
+            If 1D it will be implicitly converted to 2D. 
+        """
         if X.shape[0] != Y.shape[0]:
             raise AssertionError("X and Y don't have the same number of rows!")
         if X.ndim != 2:
@@ -162,7 +215,23 @@ class Dataset:
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
 
     def train_test_split(self, split: DatasetSplit, trn: Number) -> DataSplit:
-        """Splits dataset with method split to train and test by trn percentage. Returns X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst"""
+        """
+        Splits dataset with method split to train and test by trn percentage. 
+        
+        Parameters
+        ----------
+        
+        split: `DatasetSplit`
+                The method used to split the dataset
+        
+        trn: `Number`
+                A float number (between 0 and 1) indicating the percetange of the training dataset
+        
+        Returns
+        -------
+        `DataSplit`
+            The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
+        """
         indices = np.arange(self.X.shape[0])
         if trn <= 0 or trn >= 1:
             raise AssertionError("trn param should be in the (0, 1) range")
@@ -180,7 +249,14 @@ class Dataset:
     def train_test_split_explicit(
         self, trn: np.array = np.array([]), tst: np.array = np.array([])
     ) -> DataSplit:
-        """Splits dataset to train and test by trn or tst indices. Returns X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst"""
+        """
+        Splits dataset to train and test from pre-selected by the user trn or tst indices. 
+        
+        Returns
+        -------
+        `DataSplit`
+            The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
+        """
         if tst.size == 0 and trn.size == 0:
             raise AssertionError("You need to specify either tst or trn indices")
         if tst.size > 0 and trn.size > 0:
@@ -466,7 +542,7 @@ class Dataset:
 
 
 class Model(str, Enum):
-    """Model class"""
+    """A model class to describe commonly used ML models for spectral processing """
 
     PLS = "Partial Least Squares"
     SVR = "Support Vector Regression"
@@ -480,7 +556,7 @@ class Model(str, Enum):
 
 
 class StandardModel:
-    """Class with standard models for machine learning"""
+    """Class with standard models for machine learning that can be applied to spectral datasets"""
 
     def __init__(
         self,
@@ -489,9 +565,17 @@ class StandardModel:
         grid_search_hyperparameters: Dict = {},
     ):
         """
-        Select a model from Model class.
-        Option: Use the best_hyperparameters for the best model or
-         grid_search_hyperparameters for searching the optimum hyperparameters in a custom range.
+        Parameters
+        ----------
+        
+        model: `Model`
+                Select a model from `Model` class.
+        
+        best_hyperparameters: `dict`
+            A dictionary of pre-selected hyperparameters (e.g. a best model) 
+        
+        grid_search_hyperparameters: `dict`
+            Specify custom grid search range for the hyperparameters
         """
         if len(best_hyperparameters) != 0 and len(grid_search_hyperparameters) != 0:
             raise AssertionError(
