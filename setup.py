@@ -28,7 +28,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=["spectraxai"],
+    packages=find_packages(),
     python_requires=">=3.6",
     install_requires=[
         "pandas",
