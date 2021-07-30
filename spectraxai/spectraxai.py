@@ -268,12 +268,38 @@ class Dataset:
         return self.X[trn, :], self.X[tst, :], self.Y[trn, :], self.Y[tst, :], trn, tst
 
     def preprocess(self, method: SpectralPreprocessingSequence):
-        """Preprocess dataset by method. Returns self obj"""
+        """
+            Preprocess dataset by method.
+
+            Parameters
+            ----------
+
+            method: `SpectralPreprocessingSequence`
+                The method for the preprocess.
+
+            Returns
+            -------
+            `Dataset`
+                A Dataset object.
+        """
         self.X = self.__preprocess(self.X, method)
         return self
 
     def preprocess_3D(self, methods: List[SpectralPreprocessingSequence]):
-        """Preprocess 3D matrix by methods in a list structure. Returns"""
+        """
+        Preprocess 3D matrix by methods in a list structure.
+
+        Parameters
+        ----------
+
+        methods: `List[SpectralPreprocessingSequence]`
+            The methods for the preprocess.
+
+        Returns
+        -------
+        `numpy.ndarray`
+            A 3D matrix.
+        """
         if len(methods) <= 1:
             raise AssertionError(
                 "A 3D matrix must contain at least two pre-processing sequences"
@@ -287,6 +313,32 @@ class Dataset:
     def apply_unscale_X(
         self, method: Scale, set_params: List = [], set_attributes: List = [], X: np.ndarray = np.array([])
     ):
+        """
+            Unscale X matrix of the spectra with Scale method.
+
+            Parameters
+            ----------
+
+            method: `Scale`
+                    The method is used to scale X
+
+            set_params: `List`
+                    A list of dicts with the parameters of each Scale method.
+
+            set_attributes: `List`
+                    A list of dicts with the attributes of each Scale method.
+
+            X: `numpy.ndarray`
+                    A 2D or 3D matrix of the spectra for scaled X hat
+
+            Returns
+            -------
+            `numpy.ndarray`
+                The original X matrix of the spectra. If X, set_params and set_attributes have given for parameters.
+            or
+            `Dataset`
+                A Dataset object.
+        """
         if X.size > 0 and len(self.get_scale_X_props) > 0:
             return Dataset.unscale_X(X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
         elif len(self.get_scale_X_props) > 0:
@@ -298,6 +350,30 @@ class Dataset:
     def unscale_X(
         X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
+        """
+           Static unscale for X matrix of the spectra with Scale method.
+
+           Parameters
+           ----------
+
+           X: `numpy.ndarray`
+                   A 2D or 3D scaled matrix of the spectra.
+
+           method: `Scale`
+                   The method is used to scale X
+
+           set_params: `List`
+                   A list of dicts with the parameters of each Scale method.
+
+           set_attributes: `List`
+                   A list of dicts with the attributes of each Scale method.
+
+
+           Returns
+           -------
+           `numpy.ndarray`
+               The original X matrix of the spectra.
+       """
         if len(set_attributes) == 0:
             raise AssertionError("You need to specify set_attributes")
         if X.ndim == 3:
@@ -330,6 +406,27 @@ class Dataset:
         return X
 
     def apply_scale_X(self, method: Scale, set_params: List = [], set_attributes: List = []):
+        """
+           Scale X matrix of the spectra with Scale method.
+
+           Parameters
+           ----------
+
+           method: `Scale`
+                   The method used is to scale 2D or 3D X matrix of the spectra.
+
+           set_params: `List`
+                   A list of dicts with the parameters of each Scale method.
+
+           set_attributes: `List`
+                   A list of dicts with the attributes of each Scale method.
+
+
+           Returns
+           -------
+           `Dataset`
+                A Dataset object.
+       """
         self.X, self.get_scale_X_props = Dataset.scale_X(
             self.X, method, set_params, set_attributes
         )
@@ -338,6 +435,30 @@ class Dataset:
     def scale_X(
         X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
+        """
+           Static scale method of X matrix of the spectra with Scale method.
+
+           Parameters
+           ----------
+
+           X: `numpy.ndarray`
+                   A 2D or 3D matrix of the spectra.
+
+           method: `Scale`
+                   The method is used to scale X
+
+           set_params: `List`
+                   A list of dicts with the parameters of each Scale method.
+
+           set_attributes: `List`
+                   A list of dicts with the attributes of each Scale method.
+
+
+           Returns
+           -------
+           `Dataset`
+                A Dataset object.
+       """
         if X.ndim == 3:
             if method == Scale.STANDARD:
                 scaler = [StandardScaler() for _ in range(X.shape[2])]
@@ -362,6 +483,32 @@ class Dataset:
     def apply_unscale_Y(
         self, method: Scale, set_params: List = [], set_attributes: List = [], Y: np.ndarray = np.array([])
     ):
+        """
+            Unscale a 1D vector or 2D matrix of the output property(ies) with Scale method.
+
+            Parameters
+            ----------
+
+            method: `Scale`
+                    The method is used to scale Y
+
+            set_params: `List`
+                    A list of dicts with the parameters of each Scale method.
+
+            set_attributes: `List`
+                    A list of dicts with the attributes of each Scale method.
+
+            Y: `numpy.ndarray`
+                    A 1D vector or 2D matrix of the output property(ies).
+
+            Returns
+            -------
+            `numpy.ndarray`
+                The original 1D or 2D matrix Y. If Y, set_params and set_attributes have given for parameters.
+            or
+            `Dataset`
+                A Dataset object.
+        """
         if Y.size > 0 and len(self.get_scale_Y_props) > 0:
             return Dataset.unscale_Y(Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
         elif len(self.get_scale_Y_props) > 0:
@@ -373,6 +520,30 @@ class Dataset:
     def unscale_Y(
         Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
+        """
+           Static unscale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
+
+           Parameters
+           ----------
+
+           Y: `numpy.ndarray`
+                   A scaled 1D vector or 2D matrix of the output property(ies)
+
+           method: `Scale`
+                   The method is used to scale Y
+
+           set_params: `List`
+                   A list of dicts with the parameters of each Scale method.
+
+           set_attributes: `List`
+                   A list of dicts with the attributes of each Scale method.
+
+
+           Returns
+           -------
+           `numpy.ndarray`
+               The original 1D or 2D matrix Y
+       """
         if len(set_attributes) == 0:
             raise AssertionError("You need to specify set_attributes")
         if method == Scale.STANDARD:
@@ -390,6 +561,27 @@ class Dataset:
         return Y
 
     def apply_scale_Y(self, method: Scale, set_params: List = [], set_attributes: List = []):
+        """
+           Scale a 1D vector or 2D matrix of the output property(ies) with Scale method.
+
+           Parameters
+           ----------
+
+           method: `Scale`
+                   The method is used to scale Y
+
+           set_params: `List`
+                   A list of dicts with the parameters of each Scale method.
+
+           set_attributes: `List`
+                   A list of dicts with the attributes of each Scale method.
+
+
+           Returns
+           -------
+           `Dataset`
+                A Dataset object.
+       """
         self.Y, self.get_scale_Y_props = Dataset.scale_Y(
             self.Y, method, set_params, set_attributes
         )
@@ -398,6 +590,30 @@ class Dataset:
     def scale_Y(
         Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
+        """
+           Static scale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
+
+           Parameters
+           ----------
+
+           Y: `numpy.ndarray`
+                   A scaled 1D vector or 2D matrix of the output property(ies).
+
+           method: `Scale`
+                   The method is used to scale Y
+
+           set_params: `List`
+                   A list of dicts with the parameters of each Scale method.
+
+           set_attributes: `List`
+                   A list of dicts with the attributes of each Scale method.
+
+
+           Returns
+           -------
+           `Dataset`
+                A Dataset object.
+       """
         if method == Scale.STANDARD:
             scaler = StandardScaler()
             if len(set_params) != 0:
