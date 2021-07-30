@@ -803,14 +803,14 @@ class StandardModel:
                 .train_test_split_explicit(tst=idx_tst)
             )
 
-        # Scale the data for SVR
-        if self.model == Model.SVR:
-            scaler = StandardScaler()
-            scaler.fit(X_train)
-            X_train = scaler.transform(X_train)
-            X_test = scaler.transform(X_test)
-            ymean, ystd = np.mean(y_train), np.std(y_train)
-            y_train = (y_train - ymean) / ystd
+        # # Scale the data for SVR
+        # if self.model == Model.SVR:
+        #     scaler = StandardScaler()
+        #     scaler.fit(X_train)
+        #     X_train = scaler.transform(X_train)
+        #     X_test = scaler.transform(X_test)
+        #     ymean, ystd = np.mean(y_train), np.std(y_train)
+        #     y_train = (y_train - ymean) / ystd
 
         # Find optimal SVR RBF parameters through grid search and PLS n_components
         if len(self.best_hyperparameters) != 0:
@@ -859,8 +859,8 @@ class StandardModel:
         tst_t0 = time.time()
         y_hat = model.predict(X_test)
         tst_t1 = time.time()
-        if self.model == Model.SVR:
-            y_hat = y_hat * ystd + ymean
+        # if self.model == Model.SVR:
+        #     y_hat = y_hat * ystd + ymean
         res = metrics(y_test, y_hat)
 
         # Gather all results
