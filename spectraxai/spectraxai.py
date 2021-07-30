@@ -284,13 +284,17 @@ class Dataset:
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
 
-    def unscale_X(
-        self, method: Scale, set_params: List = [], set_attributes: List = []
+    def apply_unscale_X(
+        self, method: Scale, set_params: List = [], set_attributes: List = [], X: np.ndarray = np.array([])
     ):
-        self.X = Dataset.unscale_X(self.X, method, set_params, set_attributes)
+        if X.size > 0 and len(self.get_scale_X_props) > 0:
+            return Dataset.unscale_X(X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
+        elif len(self.get_scale_X_props) > 0:
+            self.X = Dataset.unscale_X(self.X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
+        else:
+            self.X = Dataset.unscale_X(self.X, method, set_params, set_attributes)
         return self
 
-    @staticmethod
     def unscale_X(
         X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
@@ -325,13 +329,12 @@ class Dataset:
                 X = scaler.inverse_transform(X)
         return X
 
-    def scale_X(self, method: Scale, set_params: List = [], set_attributes: List = []):
-        self.X, self.get_scale_X_params = Dataset.scale_X(
+    def apply_scale_X(self, method: Scale, set_params: List = [], set_attributes: List = []):
+        self.X, self.get_scale_X_props = Dataset.scale_X(
             self.X, method, set_params, set_attributes
         )
         return self
 
-    @staticmethod
     def scale_X(
         X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
@@ -343,7 +346,7 @@ class Dataset:
             get_params = []
             get_attributes = []
             for i in range(X.shape[2]):
-                X[:, :, i], params, attributes = Dataset.__scale_X(X[:, :, i], method, scaler[i], set_params[i], set_attributes[i])
+                X[:, :, i], params, attributes = Dataset.__scale_X(X[:, :, i], method, scaler[i], set_params[i] if len(set_params) else {}, set_attributes[i] if len(set_attributes) else {})
                 get_params.append(params)
                 get_attributes.append(attributes)
         else:
@@ -351,18 +354,22 @@ class Dataset:
                 scaler = StandardScaler()
             elif method == Scale.MINMAX:
                 scaler = MinMaxScaler()
-            X, params, attributes = Dataset.__scale_X(X, method, scaler, set_params[0], set_attributes[0])
+            X, params, attributes = Dataset.__scale_X(X, method, scaler, set_params[0] if len(set_params) else {}, set_attributes[0] if len(set_attributes) else {})
             get_params = [params]
             get_attributes = [attributes]
         return X, {"params": get_params, "attributes": get_attributes}
 
-    def unscale_Y(
-        self, method: Scale, set_params: List = [], set_attributes: List = []
+    def apply_unscale_Y(
+        self, method: Scale, set_params: List = [], set_attributes: List = [], Y: np.ndarray = np.array([])
     ):
-        self.Y = Dataset.unscale_Y(self.Y, method, set_params, set_attributes)
+        if Y.size > 0 and len(self.get_scale_Y_props) > 0:
+            return Dataset.unscale_Y(Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
+        elif len(self.get_scale_Y_props) > 0:
+            self.Y = Dataset.unscale_Y(self.Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
+        else:
+            self.Y = Dataset.unscale_Y(self.Y, method, set_params, set_attributes)
         return self
 
-    @staticmethod
     def unscale_Y(
         Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
@@ -382,13 +389,12 @@ class Dataset:
             Y = scaler.inverse_transform(Y)
         return Y
 
-    def scale_Y(self, method: Scale, set_params: List = [], set_attributes: List = []):
-        self.Y, self.get_scale_Y_params = Dataset.scale_Y(
+    def apply_scale_Y(self, method: Scale, set_params: List = [], set_attributes: List = []):
+        self.Y, self.get_scale_Y_props = Dataset.scale_Y(
             self.Y, method, set_params, set_attributes
         )
         return self
 
-    @staticmethod
     def scale_Y(
         Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
@@ -428,7 +434,6 @@ class Dataset:
             X = newX
         return X
 
-    @staticmethod
     def __set_scale_attributes(method: Scale, scaler: Any, set_attributes: Dict):
         if method == Scale.STANDARD:
             scaler.scale_ = set_attributes["scale_"]
@@ -443,7 +448,6 @@ class Dataset:
             scaler.data_range_ = set_attributes["data_range_"]
         return scaler
 
-    @staticmethod
     def __get_scale_attributes(method: Scale, scaler: Any):
         if method == Scale.STANDARD:
             return {
@@ -461,7 +465,6 @@ class Dataset:
                 "data_range_": scaler.data_range_
             }
 
-    @staticmethod
     def __scale_X(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
         if len(set_params) != 0:
             scaler = scaler.set_params(**set_params)

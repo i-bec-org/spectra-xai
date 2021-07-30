@@ -1,1 +1,1 @@
-from .spectraxai import Dataset, DatasetSplit, Model, SpectralPreprocessing, StandardModel
+from .spectraxai import Dataset, DatasetSplit, Model, SpectralPreprocessing, StandardModel, Scale
