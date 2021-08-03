@@ -11,6 +11,7 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.decomposition import PCA
 from spectraxai.utils.continuumRemoval import continuum_removal
 from spectraxai.utils.modelAssessment import metrics
 from spectraxai.utils.svrParams import sigest, estimateC
@@ -309,6 +310,12 @@ class Dataset:
             thisX = np.copy(self.X)
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
+
+    def apply_PCA(self, set_params: Dict = {}):
+        pca = PCA()
+        if len(set_params) != 0:
+            pca = pca.set_params(**set_params)
+        return pca.fit_transform(self.X)
 
     def apply_unscale_X(
         self, method: Scale, set_params: List = [], set_attributes: List = [], X: np.ndarray = np.array([])
