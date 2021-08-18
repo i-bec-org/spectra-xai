@@ -1,4 +1,5 @@
 import ast
+from numpy.core.fromnumeric import shape
 import pandas
 import time
 import numpy as np
@@ -11,7 +12,6 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.decomposition import PCA
 from spectraxai.utils.continuumRemoval import continuum_removal
 from spectraxai.utils.modelAssessment import metrics
 from spectraxai.utils.svrParams import sigest, estimateC
@@ -30,6 +30,7 @@ class SpectralPreprocessing(str, Enum):
     REF = "reflectance"
     ABS = "absorbance"
     SNV = "SNV"
+    SG0 = "SG0"
     SG1 = "SG1"
     SG2 = "SG2"
     CR = "continuum-removal"
@@ -46,6 +47,7 @@ class SpectralPreprocessing(str, Enum):
             "reflectance": SpectralPreprocessing.REF,
             "absorbance": SpectralPreprocessing.ABS,
             "SNV": SpectralPreprocessing.SNV,
+            "SG0": SpectralPreprocessing.SG0,
             "SG1": SpectralPreprocessing.SG1,
             "SG2": SpectralPreprocessing.SG2,
             "continuum-removal": SpectralPreprocessing.CR,
@@ -65,12 +67,13 @@ class SpectralPreprocessing(str, Enum):
         """Initialize a SpectralPreprocessing object from its string representation"""
         lst = ast.literal_eval(
             string.replace("no", "'no'")
-                .replace("reflectance", "'reflectance'")
-                .replace("absorbance", "'absorbance'")
-                .replace("SNV", "'SNV'")
-                .replace("SG1", "'SG1'")
-                .replace("SG2", "'SG2'")
-                .replace("continuum-removal", "'continuum-removal'")
+            .replace("reflectance", "'reflectance'")
+            .replace("absorbance", "'absorbance'")
+            .replace("SNV", "'SNV'")
+            .replace("SG0", "'SG0'")
+            .replace("SG1", "'SG1'")
+            .replace("SG2", "'SG2'")
+            .replace("continuum-removal", "'continuum-removal'")
         )
 
         return SpectralPreprocessing.__init_class(lst)
@@ -136,6 +139,8 @@ class Spectra:
             return self.absorbance()
         elif method == SpectralPreprocessing.SNV:
             return self.snv()
+        elif method == SpectralPreprocessing.SG0:
+            return self.sg(deriv=0, **kwargs)
         elif method == SpectralPreprocessing.SG1:
             return self.sg(deriv=1, **kwargs)
         elif method == SpectralPreprocessing.SG2:
@@ -152,7 +157,7 @@ class Scale(str, Enum):
     """Scaling of an input feature (or of the output) supported by the `Dataset` class"""
     STANDARD = "standard"
     MINMAX = "min-max"
-
+    
     def __str__(self):
         return self.name
 
@@ -166,7 +171,7 @@ class DatasetSplit(str, Enum):
     RANDOM = "random"
     KENNARD_STONE = "Kennard-Stone"
     CLHS = "clhs"
-
+    
     def __str__(self):
         return self.name
 
@@ -188,23 +193,23 @@ DataSplit = Tuple[
 class Dataset:
     """
     A general class to manage the dataset (i.e. X and Y).
-
+    
     Use this class to pass your 2D spectral matrix and 1D or 2D output properties.
-    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more.
+    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more. 
     """
 
     def __init__(self, X: np.ndarray, Y: np.ndarray):
         """
-
+        
         Parameters
         ----------
-
+        
         X: `numpy.ndarray`
             A 2D matrix of the spectra
-
+        
         Y: `numpy.ndarray`
             A 1D vector or 2D matrix of the output property(ies).
-            If 1D it will be implicitly converted to 2D.
+            If 1D it will be implicitly converted to 2D. 
         """
         if X.shape[0] != Y.shape[0]:
             raise AssertionError("X and Y don't have the same number of rows!")
@@ -217,17 +222,17 @@ class Dataset:
 
     def train_test_split(self, split: DatasetSplit, trn: Number) -> DataSplit:
         """
-        Splits dataset with method split to train and test by trn percentage.
-
+        Splits dataset with method split to train and test by trn percentage. 
+        
         Parameters
         ----------
-
+        
         split: `DatasetSplit`
                 The method used to split the dataset
-
+        
         trn: `Number`
                 A float number (between 0 and 1) indicating the percetange of the training dataset
-
+        
         Returns
         -------
         `DataSplit`
@@ -248,11 +253,11 @@ class Dataset:
             raise RuntimeError("Not a valid split method!")
 
     def train_test_split_explicit(
-            self, trn: np.array = np.array([]), tst: np.array = np.array([])
+        self, trn: np.array = np.array([]), tst: np.array = np.array([])
     ) -> DataSplit:
         """
-        Splits dataset to train and test from pre-selected by the user trn or tst indices.
-
+        Splits dataset to train and test from pre-selected by the user trn or tst indices. 
+        
         Returns
         -------
         `DataSplit`
@@ -311,14 +316,8 @@ class Dataset:
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
 
-    def apply_PCA(self, set_params: Dict = {}):
-        pca = PCA()
-        if len(set_params) != 0:
-            pca = pca.set_params(**set_params)
-        return pca.fit_transform(self.X)
-
     def apply_unscale_X(
-            self, method: Scale, set_params: List = [], set_attributes: List = [], X: np.ndarray = np.array([])
+        self, method: Scale, set_params: List = [], set_attributes: List = [], X: np.ndarray = np.array([])
     ):
         """
             Unscale X matrix of the spectra with Scale method.
@@ -349,14 +348,13 @@ class Dataset:
         if X.size > 0 and len(self.get_scale_X_props) > 0:
             return Dataset.unscale_X(X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
         elif len(self.get_scale_X_props) > 0:
-            self.X = Dataset.unscale_X(self.X, method, self.get_scale_X_props["params"],
-                                       self.get_scale_X_props["attributes"])
+            self.X = Dataset.unscale_X(self.X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
         else:
             self.X = Dataset.unscale_X(self.X, method, set_params, set_attributes)
         return self
 
     def unscale_X(
-            X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
+        X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
            Static unscale for X matrix of the spectra with Scale method.
@@ -386,31 +384,25 @@ class Dataset:
             raise AssertionError("You need to specify set_attributes")
         if X.ndim == 3:
             if method == Scale.STANDARD:
-                scaler = [StandardScaler() for _ in range(X.shape[2])]
+                scaler = [[StandardScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
             elif method == Scale.MINMAX:
-                scaler = [MinMaxScaler() for _ in range(X.shape[2])]
+                scaler = [[MinMaxScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
             for i in range(X.shape[2]):
-                if len(set_params) != 0:
-                    scaler[i] = scaler[i].set_params(**set_params[i])
-                if method == Scale.STANDARD:
-                    scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
-                    X[:, :, i] = scaler[i].inverse_transform(X[:, :, i])
-                elif method == Scale.MINMAX:
-                    scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
-                    X[:, :, i] = scaler[i].inverse_transform(X[:, :, i])
+                X[:, :, i] = Dataset.__unscale_X_parser(X, method, scaler[i], set_params[i], set_attributes[i])
         else:
             if method == Scale.STANDARD:
-                scaler = StandardScaler()
-                if len(set_params) != 0:
-                    scaler = scaler.set_params(**set_params[0])
-                scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-                X = scaler.inverse_transform(X)
+                scaler = [StandardScaler() for _ in range(X.shape[1])]
             elif method == Scale.MINMAX:
-                scaler = MinMaxScaler()
-                if len(set_params) != 0:
-                    scaler = scaler.set_params(**set_params[0])
-                scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-                X = scaler.inverse_transform(X)
+                scaler = [MinMaxScaler() for _ in range(X.shape[1])]
+            X = Dataset.__unscale_X_parser(X, method, scaler, set_params[0], set_attributes[0])
+        return X
+
+    def __unscale_X_parser(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+        for i in range(X.shape[1]):
+            if len(set_params) != 0:
+                scaler[i] = scaler[i].set_params(**set_params[i])
+            scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
+            X[:, i] = scaler[i].inverse_transform(X[:, i].reshape(-1, 1)).flatten()
         return X
 
     def apply_scale_X(self, method: Scale, set_params: List = [], set_attributes: List = []):
@@ -441,7 +433,7 @@ class Dataset:
         return self
 
     def scale_X(
-            X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
+        X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
            Static scale method of X matrix of the spectra with Scale method.
@@ -469,30 +461,37 @@ class Dataset:
        """
         if X.ndim == 3:
             if method == Scale.STANDARD:
-                scaler = [StandardScaler() for _ in range(X.shape[2])]
+                scaler = [[StandardScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
             elif method == Scale.MINMAX:
-                scaler = [MinMaxScaler() for _ in range(X.shape[2])]
+                scaler = [[MinMaxScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
             get_params = []
             get_attributes = []
             for i in range(X.shape[2]):
-                X[:, :, i], params, attributes = Dataset.__scale_X(X[:, :, i], method, scaler[i],
-                                                                   set_params[i] if len(set_params) else {},
-                                                                   set_attributes[i] if len(set_attributes) else {})
+                X[:, :, i], params, attributes = Dataset.__scale_X_parser(X[:, :, i], method, scaler[i], set_params[i] if len(set_params) else [], set_attributes[i] if len(set_attributes) else [])
                 get_params.append(params)
                 get_attributes.append(attributes)
         else:
             if method == Scale.STANDARD:
-                scaler = StandardScaler()
+                scaler = [StandardScaler() for _ in range(X.shape[1])]
             elif method == Scale.MINMAX:
-                scaler = MinMaxScaler()
-            X, params, attributes = Dataset.__scale_X(X, method, scaler, set_params[0] if len(set_params) else {},
-                                                      set_attributes[0] if len(set_attributes) else {})
+                scaler = [MinMaxScaler() for _ in range(X.shape[1])]
+            X, params, attributes = Dataset.__scale_X_parser(X, method, scaler, set_params[0] if len(set_params) else [], set_attributes[0] if len(set_attributes) else [])
             get_params = [params]
             get_attributes = [attributes]
         return X, {"params": get_params, "attributes": get_attributes}
 
+    def __scale_X_parser(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+        get_params = []
+        get_attributes = []
+        for i in range(X.shape[1]):
+            temp_X, params, attributes = Dataset.__scale_X(X[:, i].reshape(-1, 1), method, scaler[i], set_params[i] if len(set_params) else {}, set_attributes[i] if len(set_attributes) else {})
+            X[:, i] = temp_X.flatten()
+            get_params.append(params)
+            get_attributes.append(attributes)
+        return X, get_params, get_attributes
+
     def apply_unscale_Y(
-            self, method: Scale, set_params: List = [], set_attributes: List = [], Y: np.ndarray = np.array([])
+        self, method: Scale, set_params: List = [], set_attributes: List = [], Y: np.ndarray = np.array([])
     ):
         """
             Unscale a 1D vector or 2D matrix of the output property(ies) with Scale method.
@@ -523,14 +522,13 @@ class Dataset:
         if Y.size > 0 and len(self.get_scale_Y_props) > 0:
             return Dataset.unscale_Y(Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
         elif len(self.get_scale_Y_props) > 0:
-            self.Y = Dataset.unscale_Y(self.Y, method, self.get_scale_Y_props["params"],
-                                       self.get_scale_Y_props["attributes"])
+            self.Y = Dataset.unscale_Y(self.Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
         else:
             self.Y = Dataset.unscale_Y(self.Y, method, set_params, set_attributes)
         return self
 
     def unscale_Y(
-            Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
+        Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
            Static unscale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
@@ -559,18 +557,20 @@ class Dataset:
         if len(set_attributes) == 0:
             raise AssertionError("You need to specify set_attributes")
         if method == Scale.STANDARD:
-            scaler = StandardScaler()
-            if len(set_params) != 0:
-                scaler = scaler.set_params(**set_params[0])
-            scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-            Y = scaler.inverse_transform(Y)
+            scaler = [StandardScaler() for _ in range(Y.shape[1])]
         elif method == Scale.MINMAX:
-            scaler = MinMaxScaler()
-            if len(set_params) != 0:
-                scaler = scaler.set_params(**set_params[0])
-            scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-            Y = scaler.inverse_transform(Y)
+            scaler = [MinMaxScaler() for _ in range(Y.shape[1])]
+        Y = Dataset.__unscale_Y_parser(Y, method, scaler, set_params, set_attributes)
         return Y
+
+    def __unscale_Y_parser(Y: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+        for i in range(Y.shape[1]):
+            if len(set_params) != 0:
+                scaler[i] = scaler[i].set_params(**set_params[i])
+            scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
+            Y[:, i] = scaler[i].inverse_transform(Y[:, i].reshape(-1, 1)).flatten()
+        return Y
+
 
     def apply_scale_Y(self, method: Scale, set_params: List = [], set_attributes: List = []):
         """
@@ -600,7 +600,7 @@ class Dataset:
         return self
 
     def scale_Y(
-            Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
+        Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
            Static scale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
@@ -627,26 +627,26 @@ class Dataset:
                 A Dataset object.
        """
         if method == Scale.STANDARD:
-            scaler = StandardScaler()
-            if len(set_params) != 0:
-                scaler = scaler.set_params(**set_params[0])
-            if len(set_attributes) != 0:
-                scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
-            else:
-                scaler = scaler.fit(Y)
-            Y = scaler.transform(Y)
-            get_attributes = [Dataset.__get_scale_attributes(method, scaler)]
+            scaler = [StandardScaler() for _ in range(Y.shape[1])]
         elif method == Scale.MINMAX:
-            scaler = MinMaxScaler()
+            scaler = [MinMaxScaler() for _ in range(Y.shape[1])]
+        Y, get_params, get_attributes = Dataset.__scale_Y_parser(Y, method, scaler, set_params, set_attributes)
+        return Y, {"params": get_params, "attributes": get_attributes}
+
+    def __scale_Y_parser(Y: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+        get_params = []
+        get_attributes = []
+        for i in range(Y.shape[1]):
             if len(set_params) != 0:
-                scaler = scaler.set_params(**set_params[0])
+                scaler[i] = scaler[i].set_params(**set_params[i])
             if len(set_attributes) != 0:
-                scaler = Dataset.__set_scale_attributes(method, scaler, set_attributes[0])
+                scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
             else:
-                scaler = scaler.fit(Y)
-            Y = scaler.transform(Y)
-            get_attributes = [Dataset.__get_scale_attributes(method, scaler)]
-        return Y, {"params": [scaler.get_params()], "attributes": get_attributes}
+                scaler[i] = scaler[i].fit(Y[:, i].reshape(-1, 1))
+            Y[:, i] = scaler[i].transform(Y[:, i].reshape(-1, 1)).flatten()
+            get_params.append(scaler[i].get_params())
+            get_attributes.append(Dataset.__get_scale_attributes(method, scaler[i]))
+        return Y, get_params, get_attributes
 
     def __preprocess(self, X: np.ndarray, method: SpectralPreprocessingSequence):
         if isinstance(method, str):
@@ -656,10 +656,11 @@ class Dataset:
         elif isinstance(method, list):
             for each_method in method:
                 if isinstance(each_method, str):
-                    newX = Spectra(X).apply(each_method).X
+                    X = Spectra(X).apply(each_method).X
                 elif isinstance(each_method, tuple):
-                    newX = Spectra(X).apply(each_method[0], **each_method[1]).X
-            X = newX
+                    X = Spectra(X).apply(each_method[0], **each_method[1]).X
+                elif isinstance(each_method, list):
+                    X = self.__preprocess(X, each_method)
         return X
 
     def __set_scale_attributes(method: Scale, scaler: Any, set_attributes: Dict):
@@ -732,21 +733,21 @@ class StandardModel:
     """Class with standard models for machine learning that can be applied to spectral datasets"""
 
     def __init__(
-            self,
-            model: Model,
-            best_hyperparameters: Dict = {},
-            grid_search_hyperparameters: Dict = {},
+        self,
+        model: Model,
+        best_hyperparameters: Dict = {},
+        grid_search_hyperparameters: Dict = {},
     ):
         """
         Parameters
         ----------
-
+        
         model: `Model`
                 Select a model from `Model` class.
-
+        
         best_hyperparameters: `dict`
-            A dictionary of pre-selected hyperparameters (e.g. a best model)
-
+            A dictionary of pre-selected hyperparameters (e.g. a best model) 
+        
         grid_search_hyperparameters: `dict`
             Specify custom grid search range for the hyperparameters
         """
@@ -788,12 +789,12 @@ class StandardModel:
         return vips
 
     def train(
-            self,
-            X: np.ndarray,
-            Y: np.ndarray,
-            preprocess: SpectralPreprocessingSequence = None,
-            idx_trn: np.array = np.array([]),
-            idx_tst: np.array = np.array([]),
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        preprocess: SpectralPreprocessingSequence = None,
+        idx_trn: np.array = np.array([]),
+        idx_tst: np.array = np.array([]),
     ):
         """Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model"""
         if preprocess == None:
@@ -805,14 +806,14 @@ class StandardModel:
         if idx_trn.size > 0:
             X_train, X_test, y_train, y_test, _, _ = (
                 Dataset(X, Y)
-                    .preprocess(preprocess)
-                    .train_test_split_explicit(trn=idx_trn)
+                .preprocess(preprocess)
+                .train_test_split_explicit(trn=idx_trn)
             )
         else:
             X_train, X_test, y_train, y_test, _, _ = (
                 Dataset(X, Y)
-                    .preprocess(preprocess)
-                    .train_test_split_explicit(tst=idx_tst)
+                .preprocess(preprocess)
+                .train_test_split_explicit(tst=idx_tst)
             )
 
         # # Scale the data for SVR
@@ -893,12 +894,12 @@ class StandardModel:
         return res
 
     def train_with_sequence(
-            self,
-            X: np.ndarray,
-            Y: np.ndarray,
-            preprocesses: List[SpectralPreprocessingSequence] = [],
-            idx_trn: np.array = np.array([]),
-            idx_tst: np.array = np.array([]),
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        preprocesses: List[SpectralPreprocessingSequence] = [],
+        idx_trn: np.array = np.array([]),
+        idx_tst: np.array = np.array([]),
     ):
         """Train the model giving the X, Y, list of preprocesses sequense, idx_trn or idx_tst. Returns a dataframe of the trained models"""
         if len(preprocesses) == 0:
