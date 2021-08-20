@@ -7,7 +7,7 @@ from enum import Enum
 from numbers import Number
 from scipy.signal import savgol_filter
 from typing import Union, Tuple, Dict, List, Any
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
@@ -171,6 +171,7 @@ class DatasetSplit(str, Enum):
     RANDOM = "random"
     KENNARD_STONE = "Kennard-Stone"
     CLHS = "clhs"
+    CROSS_VALIDATION = "cross-validation"
     
     def __str__(self):
         return self.name
@@ -220,7 +221,7 @@ class Dataset:
             Y = Y.to_numpy()
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
 
-    def train_test_split(self, split: DatasetSplit, trn: Number) -> DataSplit:
+    def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
         """
         Splits dataset with method split to train and test by trn percentage. 
         
@@ -230,8 +231,9 @@ class Dataset:
         split: `DatasetSplit`
                 The method used to split the dataset
         
-        trn: `Number`
-                A float number (between 0 and 1) indicating the percetange of the training dataset
+        opt: `Number`
+                A float number (between 0 and 1) indicating the percetange of the training dataset for Random and Kennard Stone split.
+                A physical number for Cross Validation split.
         
         Returns
         -------
@@ -239,16 +241,29 @@ class Dataset:
             The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
         """
         indices = np.arange(self.X.shape[0])
-        if trn <= 0 or trn >= 1:
-            raise AssertionError("trn param should be in the (0, 1) range")
+        if split != DatasetSplit.CROSS_VALIDATION and (opt <= 0 or opt >= 1):
+            raise AssertionError("opt param should be in the (0, 1) range")
+        elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
+            raise AssertionError("opt param shoud be positive")
         if split == DatasetSplit.RANDOM:
-            return train_test_split(self.X, self.Y, indices, train_size=trn)
+            return train_test_split(self.X, self.Y, indices, train_size=opt)
         elif split == DatasetSplit.KENNARD_STONE:
             return kennardStone.train_test_split(
-                self.X, self.Y, indices, test_size=(1 - trn)
+                self.X, self.Y, indices, test_size=(1 - opt)
             )
         elif split == DatasetSplit.CLHS:
             raise NotImplementedError("clhs not implemented yet")
+        elif split == DatasetSplit.CROSS_VALIDATION:
+            kf = KFold(opt)
+            X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst = [], [], [], [], [], []
+            for trn_index, tst_index in kf.split(self.X):
+                X_trn.append(self.X[trn_index, :])
+                X_tst.append(self.X[tst_index, :])
+                Y_trn.append(self.Y[trn_index, :])
+                Y_tst.append(self.Y[tst_index, :])
+                idx_trn.append(trn_index)
+                idx_tst.append(tst_index)
+            return X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst
         else:
             raise RuntimeError("Not a valid split method!")
 
