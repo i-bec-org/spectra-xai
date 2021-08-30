@@ -815,21 +815,23 @@ class StandardModel:
         if preprocess == None:
             raise AssertionError("You need to specify Spectral Preprocessing Sequence")
         if idx_tst.size == 0 and idx_trn.size == 0:
-            raise AssertionError("You need to specify either tst or trn indices")
-        if idx_tst.size > 0 and idx_trn.size > 0:
-            raise AssertionError("You cannot specify both trn and tst")
-        if idx_trn.size > 0:
+            raise AssertionError("You need to specify either tst or trn indices or both")
+        # if idx_tst.size > 0 and idx_trn.size > 0:
+        #     raise AssertionError("You cannot specify both trn and tst")
+        if idx_trn.size > 0 and idx_tst.size == 0:
             X_train, X_test, y_train, y_test, _, _ = (
                 Dataset(X, Y)
                 .preprocess(preprocess)
                 .train_test_split_explicit(trn=idx_trn)
             )
-        else:
+        elif idx_trn.size == 0 and idx_tst.size > 0:
             X_train, X_test, y_train, y_test, _, _ = (
                 Dataset(X, Y)
                 .preprocess(preprocess)
                 .train_test_split_explicit(tst=idx_tst)
             )
+        else:
+            X_train, X_test, y_train, y_test = X[idx_trn], X[idx_tst], Y[idx_trn], Y[idx_tst]
 
         # # Scale the data for SVR
         # if self.model == Model.SVR:
@@ -844,13 +846,13 @@ class StandardModel:
         if len(self.best_hyperparameters) != 0:
             if self.model == Model.SVR:
                 model = SVR(kernel="rbf", max_iter=5e8)
-                model.set_params(**self.best_hyperparameters)
+                model = model.set_params(**self.best_hyperparameters)
             elif self.model == Model.PLS:
                 model = PLSRegression()
-                model.set_params(**self.best_hyperparameters)
+                model = model.set_params(**self.best_hyperparameters)
             elif self.model == Model.RF:
                 model = RandomForestRegressor()
-                model.set_params(**self.best_hyperparameters)
+                model = model.set_params(**self.best_hyperparameters)
             trn_t0 = time.time()
             model.fit(X_train, y_train)
             trn_t1 = time.time()
@@ -865,7 +867,7 @@ class StandardModel:
             elif self.model == Model.PLS:
                 if not "n_components" in self.grid_search_hyperparameters:
                     self.grid_search_hyperparameters["n_components"] = np.arange(
-                        1, min(100, X.shape[1]), 1
+                        1, min(100, X_train.shape[1]), 1
                     )
                 model = PLSRegression()
             elif self.model == Model.RF:
