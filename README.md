@@ -20,3 +20,5 @@ cd spectra-xai && pip install .
 
 ## Running tests
 
+## Examples
+Some examples of the usage of this library can be found in Examples folder.
