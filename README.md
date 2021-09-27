@@ -18,5 +18,10 @@ git clone https://github.com/i-bec-org/spectra-xai
 cd spectra-xai && pip install .
 '''
 
+or run
+'''
+python setup.py install
+'''
+
 ## Running tests
 
