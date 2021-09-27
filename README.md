@@ -13,10 +13,10 @@ This repository contains python code to enable XAI analysis on spectral datasets
 
 On a new conda environment or virtualenv run:
 
-'''
+```
 git clone https://github.com/i-bec-org/spectra-xai
 cd spectra-xai && pip install .
-'''
+```
 
 or run
 '''
@@ -25,3 +25,5 @@ python setup.py install
 
 ## Running tests
 
+## Examples
+Some examples of the usage of this library can be found in Examples folder.

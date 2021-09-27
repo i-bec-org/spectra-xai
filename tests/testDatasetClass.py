@@ -1,6 +1,6 @@
 import unittest
 from .context import spectraxai
-from spectraxai import Dataset, DatasetSplit, SpectralPreprocessing
+from spectraxai import Dataset, DatasetSplit, SpectralPreprocessing, Scale
 import numpy as np
 
 
@@ -109,6 +109,50 @@ class TestDatasetClass(unittest.TestCase):
         self.assertTrue(X.shape[0] == self.nsamples)
         self.assertTrue(X.shape[1] == self.nfeatures)
         self.assertTrue(X.shape[2] == len(methods))
+
+    def test_scale_X(self):
+        X = self.datasetY2dim.X
+        self.assertTrue(np.all(np.abs(self.datasetY2dim.apply_scale_X(Scale.STANDARD).apply_unscale_X(Scale.STANDARD).X - X) < 1e-6))
+        self.assertTrue(np.all(np.abs(self.datasetY2dim.apply_scale_X(Scale.MINMAX).apply_unscale_X(Scale.MINMAX).X - X) < 1e-6))
+
+        methods = [
+            SpectralPreprocessing.ABS,
+            (SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3}),
+            [SpectralPreprocessing.ABS, SpectralPreprocessing.SNV],
+            [
+                (SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3}),
+                SpectralPreprocessing.SNV,
+            ],
+        ]
+        X = self.datasetY1dim.preprocess_3D(methods)
+        X_scaled, props = Dataset.scale_X(X, Scale.STANDARD)
+        self.assertTrue(np.all(np.abs(Dataset.unscale_X(X_scaled, Scale.STANDARD, props["params"], props["attributes"]) - X) < 1e-6))
+        X_scaled, props = Dataset.scale_X(X, Scale.MINMAX)
+        self.assertTrue(np.all(np.abs(Dataset.unscale_X(X_scaled, Scale.MINMAX, props["params"], props["attributes"]) - X) < 1e-6))
+
+    def test_scale_Y(self):
+        y = self.datasetY1dim.Y
+        self.assertTrue(np.all(np.abs(
+            self.datasetY1dim.apply_scale_Y(Scale.STANDARD).apply_unscale_Y(Scale.STANDARD).Y - y) < 1e-6))
+        self.assertTrue(np.all(np.abs(
+            self.datasetY1dim.apply_scale_Y(Scale.MINMAX).apply_unscale_Y(Scale.MINMAX).Y - y) < 1e-6))
+
+        Y = self.datasetY2dim.Y
+        self.assertTrue(np.all(np.abs(
+            self.datasetY2dim.apply_scale_Y(Scale.STANDARD).apply_unscale_Y(Scale.STANDARD).Y - Y) < 1e-6))
+        self.assertTrue(np.all(np.abs(
+            self.datasetY2dim.apply_scale_Y(Scale.MINMAX).apply_unscale_Y(Scale.MINMAX).Y - Y) < 1e-6))
+
+        X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst = self.datasetY2dim.train_test_split(DatasetSplit.KENNARD_STONE, self.split_size)
+
+        y_trn_scaled = Dataset(X_trn, y_trn).apply_scale_Y(Scale.STANDARD)
+        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(Scale.STANDARD, y_trn_scaled.get_scale_Y_props["params"], y_trn_scaled.get_scale_Y_props["attributes"])
+        self.assertTrue(np.all(np.abs(y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.STANDARD) - y_tst) < 1e-6))
+
+        y_trn_scaled = Dataset(X_trn, y_trn).apply_scale_Y(Scale.MINMAX)
+        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(Scale.MINMAX, y_trn_scaled.get_scale_Y_props["params"],y_trn_scaled.get_scale_Y_props["attributes"])
+        self.assertTrue(np.all(np.abs(y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.MINMAX) - y_tst) < 1e-6))
+
 
 
 if __name__ == "__main__":
