@@ -79,14 +79,14 @@ class SpectralPreprocessing(str, Enum):
         return SpectralPreprocessing.__init_class(lst)
 
 
-# Options passed to pre-processing (e.g. window_length for SG)
 SpectralPreprocessingOptions = Union[
     SpectralPreprocessing, Tuple[SpectralPreprocessing, Dict[str, int]]
 ]
-# A sequence of spectral pre-processing (e.g. SG1 + SNV)
+""" Options passed to pre-processing (e.g. window_length for SG) """
 SpectralPreprocessingSequence = List[
     Union[SpectralPreprocessingOptions, List[SpectralPreprocessingOptions]]
 ]
+""" A sequence of one or more spectral pre-treatments (e.g. SG1 + SNV) """
 
 
 class Spectra:
@@ -102,6 +102,7 @@ class Spectra:
         if X.ndim != 2:
             raise AssertionError("X should a 2-D matrix")
         self.X = X
+        """ np 2D array containing the (sample, wavelengths) matrix """
 
     def reflectance(self) -> np.ndarray:
         """Transform absorbance to reflectance"""
@@ -254,7 +255,7 @@ class Dataset:
         elif split == DatasetSplit.CLHS:
             raise NotImplementedError("clhs not implemented yet")
         elif split == DatasetSplit.CROSS_VALIDATION:
-            kf = KFold(opt)
+            kf = KFold(opt, shuffle=True)
             X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst = [], [], [], [], [], []
             for trn_index, tst_index in kf.split(self.X):
                 X_trn.append(self.X[trn_index, :])
