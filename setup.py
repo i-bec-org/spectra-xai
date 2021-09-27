@@ -14,21 +14,9 @@ with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
 
 # This call to setup() does all the work
 setup(
-    name="spectra-xai",
+    name="spectraxai",
     version="0.1.0",
-    description="Library",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://www.i-bec.org/",
-    author="",
-    author_email="",
-    license="",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
-    packages=find_packages(),
+    packages=find_packages(include=["spectraxai", "utils"]),
     python_requires=">=3.6",
     install_requires=[
         "pandas",
