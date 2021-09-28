@@ -57,10 +57,19 @@
 
             </li>
             <li>
+                    <a class="variable" href="#SpectralPreprocessingOptions">SpectralPreprocessingOptions</a>
+            </li>
+            <li>
+                    <a class="variable" href="#SpectralPreprocessingSequence">SpectralPreprocessingSequence</a>
+            </li>
+            <li>
                     <a class="class" href="#Spectra">Spectra</a>
                             <ul class="memberlist">
                         <li>
                                 <a class="function" href="#Spectra.__init__">Spectra</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Spectra.X">X</a>
                         </li>
                         <li>
                                 <a class="function" href="#Spectra.reflectance">reflectance</a>
@@ -290,14 +299,14 @@ spectraxai<wbr>.spectraxai    </h1>
         <span class="k">return</span> <span class="n">SpectralPreprocessing</span><span class="o">.</span><span class="n">__init_class</span><span class="p">(</span><span class="n">lst</span><span class="p">)</span>
 
 
-<span class="c1"># Options passed to pre-processing (e.g. window_length for SG)</span>
 <span class="n">SpectralPreprocessingOptions</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span>
     <span class="n">SpectralPreprocessing</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">SpectralPreprocessing</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span>
 <span class="p">]</span>
-<span class="c1"># A sequence of spectral pre-processing (e.g. SG1 + SNV)</span>
+<span class="sd">&quot;&quot;&quot; Options passed to pre-processing (e.g. window_length for SG) &quot;&quot;&quot;</span>
 <span class="n">SpectralPreprocessingSequence</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span>
     <span class="n">Union</span><span class="p">[</span><span class="n">SpectralPreprocessingOptions</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">SpectralPreprocessingOptions</span><span class="p">]]</span>
 <span class="p">]</span>
+<span class="sd">&quot;&quot;&quot; A sequence of one or more spectral pre-treatments (e.g. SG1 + SNV) &quot;&quot;&quot;</span>
 
 
 <span class="k">class</span> <span class="nc">Spectra</span><span class="p">:</span>
@@ -313,6 +322,7 @@ spectraxai<wbr>.spectraxai    </h1>
         <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;X should a 2-D matrix&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="sd">&quot;&quot;&quot; np 2D array containing the (sample, wavelengths) matrix &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">reflectance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Transform absorbance to reflectance&quot;&quot;&quot;</span>
@@ -465,7 +475,7 @@ spectraxai<wbr>.spectraxai    </h1>
         <span class="k">elif</span> <span class="n">split</span> <span class="o">==</span> <span class="n">DatasetSplit</span><span class="o">.</span><span class="n">CLHS</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;clhs not implemented yet&quot;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">split</span> <span class="o">==</span> <span class="n">DatasetSplit</span><span class="o">.</span><span class="n">CROSS_VALIDATION</span><span class="p">:</span>
-            <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">opt</span><span class="p">)</span>
+            <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">X_trn</span><span class="p">,</span> <span class="n">X_tst</span><span class="p">,</span> <span class="n">Y_trn</span><span class="p">,</span> <span class="n">Y_tst</span><span class="p">,</span> <span class="n">idx_trn</span><span class="p">,</span> <span class="n">idx_tst</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">trn_index</span><span class="p">,</span> <span class="n">tst_index</span> <span class="ow">in</span> <span class="n">kf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">):</span>
                 <span class="n">X_trn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">[</span><span class="n">trn_index</span><span class="p">,</span> <span class="p">:])</span>
@@ -1021,6 +1031,7 @@ spectraxai<wbr>.spectraxai    </h1>
         <span class="n">preprocess</span><span class="p">:</span> <span class="n">SpectralPreprocessingSequence</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">idx_trn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
         <span class="n">idx_tst</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
+        <span class="n">get_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">preprocess</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
@@ -1119,7 +1130,8 @@ spectraxai<wbr>.spectraxai    </h1>
             <span class="n">res</span><span class="p">[</span><span class="s2">&quot;feature_importance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">feature_importances_</span>
         <span class="n">res</span><span class="p">[</span><span class="s2">&quot;TrainingTime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trn_t1</span> <span class="o">-</span> <span class="n">trn_t0</span>
         <span class="n">res</span><span class="p">[</span><span class="s2">&quot;TestingTime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tst_t1</span> <span class="o">-</span> <span class="n">tst_t0</span>
-        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="k">if</span> <span class="n">get_model</span><span class="p">:</span>
+            <span class="n">res</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
         <span class="k">return</span> <span class="n">res</span>
 
     <span class="k">def</span> <span class="nf">train_with_sequence</span><span class="p">(</span>
@@ -1413,6 +1425,28 @@ that may be applied to a spectral matrix.</p>
                                 </dl>
                             </div>
                 </section>
+                <section id="SpectralPreprocessingOptions">
+                                <div class="attr variable"><a class="headerlink" href="#SpectralPreprocessingOptions">#&nbsp;&nbsp</a>
+
+        <span class="name">SpectralPreprocessingOptions</span><span class="default_value"> = typing.Union[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, typing.Tuple[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, typing.Dict[str, int]]]</span>
+    </div>
+
+            <div class="docstring"><p>Options passed to pre-processing (e.g. window_length for SG)</p>
+</div>
+
+
+                </section>
+                <section id="SpectralPreprocessingSequence">
+                                <div class="attr variable"><a class="headerlink" href="#SpectralPreprocessingSequence">#&nbsp;&nbsp</a>
+
+        <span class="name">SpectralPreprocessingSequence</span><span class="default_value"> = typing.List[typing.Union[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, typing.Tuple[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, typing.Dict[str, int]], typing.List[typing.Union[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, typing.Tuple[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, typing.Dict[str, int]]]]]]</span>
+    </div>
+
+            <div class="docstring"><p>A sequence of one or more spectral pre-treatments (e.g. SG1 + SNV)</p>
+</div>
+
+
+                </section>
                 <section id="Spectra">
                                 <div class="attr class">
         <a class="headerlink" href="#Spectra">#&nbsp;&nbsp</a>
@@ -1437,6 +1471,7 @@ that may be applied to a spectral matrix.</p>
         <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;X should a 2-D matrix&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="sd">&quot;&quot;&quot; np 2D array containing the (sample, wavelengths) matrix &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">reflectance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Transform absorbance to reflectance&quot;&quot;&quot;</span>
@@ -1511,11 +1546,23 @@ that may be applied to a spectral matrix.</p>
         <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;X should a 2-D matrix&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="sd">&quot;&quot;&quot; np 2D array containing the (sample, wavelengths) matrix &quot;&quot;&quot;</span>
 </pre></div>
 
         </details>
 
     
+
+                            </div>
+                            <div id="Spectra.X" class="classattr">
+                                            <div class="attr variable"><a class="headerlink" href="#Spectra.X">#&nbsp;&nbsp</a>
+
+        <span class="name">X</span>
+    </div>
+
+            <div class="docstring"><p>np 2D array containing the (sample, wavelengths) matrix</p>
+</div>
+
 
                             </div>
                             <div id="Spectra.reflectance" class="classattr">
@@ -2000,7 +2047,7 @@ that may be applied to a spectral matrix.</p>
         <span class="k">elif</span> <span class="n">split</span> <span class="o">==</span> <span class="n">DatasetSplit</span><span class="o">.</span><span class="n">CLHS</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;clhs not implemented yet&quot;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">split</span> <span class="o">==</span> <span class="n">DatasetSplit</span><span class="o">.</span><span class="n">CROSS_VALIDATION</span><span class="p">:</span>
-            <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">opt</span><span class="p">)</span>
+            <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">X_trn</span><span class="p">,</span> <span class="n">X_tst</span><span class="p">,</span> <span class="n">Y_trn</span><span class="p">,</span> <span class="n">Y_tst</span><span class="p">,</span> <span class="n">idx_trn</span><span class="p">,</span> <span class="n">idx_tst</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">trn_index</span><span class="p">,</span> <span class="n">tst_index</span> <span class="ow">in</span> <span class="n">kf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">):</span>
                 <span class="n">X_trn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">[</span><span class="n">trn_index</span><span class="p">,</span> <span class="p">:])</span>
@@ -2578,7 +2625,7 @@ Supports methods for pre-processing X, scaling X and Y, splitting the dataset, a
         <span class="k">elif</span> <span class="n">split</span> <span class="o">==</span> <span class="n">DatasetSplit</span><span class="o">.</span><span class="n">CLHS</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;clhs not implemented yet&quot;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">split</span> <span class="o">==</span> <span class="n">DatasetSplit</span><span class="o">.</span><span class="n">CROSS_VALIDATION</span><span class="p">:</span>
-            <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">opt</span><span class="p">)</span>
+            <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">X_trn</span><span class="p">,</span> <span class="n">X_tst</span><span class="p">,</span> <span class="n">Y_trn</span><span class="p">,</span> <span class="n">Y_tst</span><span class="p">,</span> <span class="n">idx_trn</span><span class="p">,</span> <span class="n">idx_tst</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">trn_index</span><span class="p">,</span> <span class="n">tst_index</span> <span class="ow">in</span> <span class="n">kf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">):</span>
                 <span class="n">X_trn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">[</span><span class="n">trn_index</span><span class="p">,</span> <span class="p">:])</span>
@@ -2699,7 +2746,7 @@ Supports methods for pre-processing X, scaling X and Y, splitting the dataset, a
 
 <h2 id="parameters">Parameters</h2>
 
-<p>method: <code>SpectralPreprocessingSequence</code>
+<p>method: <code><a href="#SpectralPreprocessingSequence">SpectralPreprocessingSequence</a></code>
     The method for the preprocess.</p>
 
 <h2 id="returns">Returns</h2>
@@ -3589,6 +3636,7 @@ or
         <span class="n">preprocess</span><span class="p">:</span> <span class="n">SpectralPreprocessingSequence</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">idx_trn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
         <span class="n">idx_tst</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
+        <span class="n">get_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">preprocess</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
@@ -3687,7 +3735,8 @@ or
             <span class="n">res</span><span class="p">[</span><span class="s2">&quot;feature_importance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">feature_importances_</span>
         <span class="n">res</span><span class="p">[</span><span class="s2">&quot;TrainingTime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trn_t1</span> <span class="o">-</span> <span class="n">trn_t0</span>
         <span class="n">res</span><span class="p">[</span><span class="s2">&quot;TestingTime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tst_t1</span> <span class="o">-</span> <span class="n">tst_t0</span>
-        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="k">if</span> <span class="n">get_model</span><span class="p">:</span>
+            <span class="n">res</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
         <span class="k">return</span> <span class="n">res</span>
 
     <span class="k">def</span> <span class="nf">train_with_sequence</span><span class="p">(</span>
@@ -3821,7 +3870,8 @@ or
     Y: numpy.ndarray,
     preprocess: List[Union[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, Tuple[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, Dict[str, int]], List[Union[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, Tuple[<a href="#SpectralPreprocessing">spectraxai.spectraxai.SpectralPreprocessing</a>, Dict[str, int]]]]]] = None,
     idx_trn: &lt;built-in function array&gt; = array([], dtype=float64),
-    idx_tst: &lt;built-in function array&gt; = array([], dtype=float64)
+    idx_tst: &lt;built-in function array&gt; = array([], dtype=float64),
+    get_model: bool = False
 )</span>:
     </div>
 
@@ -3834,6 +3884,7 @@ or
         <span class="n">preprocess</span><span class="p">:</span> <span class="n">SpectralPreprocessingSequence</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">idx_trn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
         <span class="n">idx_tst</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span>
+        <span class="n">get_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">preprocess</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
@@ -3932,7 +3983,8 @@ or
             <span class="n">res</span><span class="p">[</span><span class="s2">&quot;feature_importance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">feature_importances_</span>
         <span class="n">res</span><span class="p">[</span><span class="s2">&quot;TrainingTime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trn_t1</span> <span class="o">-</span> <span class="n">trn_t0</span>
         <span class="n">res</span><span class="p">[</span><span class="s2">&quot;TestingTime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tst_t1</span> <span class="o">-</span> <span class="n">tst_t0</span>
-        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="k">if</span> <span class="n">get_model</span><span class="p">:</span>
+            <span class="n">res</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
         <span class="k">return</span> <span class="n">res</span>
 </pre></div>
 
