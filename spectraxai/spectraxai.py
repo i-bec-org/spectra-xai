@@ -811,6 +811,7 @@ class StandardModel:
         preprocess: SpectralPreprocessingSequence = None,
         idx_trn: np.array = np.array([]),
         idx_tst: np.array = np.array([]),
+        get_model: bool = False
     ):
         """Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model"""
         if preprocess == None:
@@ -909,7 +910,8 @@ class StandardModel:
             res["feature_importance"] = model.feature_importances_
         res["TrainingTime"] = trn_t1 - trn_t0
         res["TestingTime"] = tst_t1 - tst_t0
-        res["model"] = model
+        if get_model:
+            res["model"] = model
         return res
 
     def train_with_sequence(
