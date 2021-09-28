@@ -16,7 +16,7 @@ with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
 setup(
     name="spectraxai",
     version="0.1.1",
-    packages=find_packages(include=["spectraxai", "utils"]),
+    packages=find_packages(include=["spectraxai", "spectraxai.utils"]),
     python_requires=">=3.6",
     install_requires=[
         "pandas",
