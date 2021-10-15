@@ -835,12 +835,12 @@ class StandardModel:
         else:
             X_train, X_test, y_train, y_test = X[idx_trn], X[idx_tst], Y[idx_trn], Y[idx_tst]
 
-        # # Scale the data for SVR
-        # if self.model == Model.SVR:
-        #     scaler = StandardScaler()
-        #     scaler.fit(X_train)
-        #     X_train = scaler.transform(X_train)
-        #     X_test = scaler.transform(X_test)
+        # Scale the data for SVR
+        if self.model == Model.SVR:
+            scaler = StandardScaler()
+            scaler.fit(X_train)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
         #     ymean, ystd = np.mean(y_train), np.std(y_train)
         #     y_train = (y_train - ymean) / ystd
 
