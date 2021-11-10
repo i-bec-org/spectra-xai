@@ -1,5 +1,4 @@
 import numpy as np
-from math import ceil
 from itertools import chain
 from sklearn.model_selection._split import BaseShuffleSplit
 from sklearn.model_selection._split import _BaseKFold

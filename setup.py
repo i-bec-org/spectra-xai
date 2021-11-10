@@ -23,6 +23,7 @@ setup(
         "numpy",
         "scipy",
         "sklearn",
-        "matplotlib"
+        "matplotlib",
+        "cubist"
     ],
 )

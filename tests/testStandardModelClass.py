@@ -3,7 +3,8 @@ import os
 import pandas
 import numpy as np
 from .context import spectraxai, DATA_FOLDER
-from spectraxai import Model, StandardModel, SpectralPreprocessing
+from spectraxai.models import Model, StandardModel
+from spectraxai.spectra import SpectralPreprocessing
 
 
 class TestStandardModelClass(unittest.TestCase):
@@ -23,6 +24,10 @@ class TestStandardModelClass(unittest.TestCase):
                 best_hyperparameters={"max_features": "log2", "n_estimators": 50},
             ),
             StandardModel(
+                Model.CUBIST,
+                best_hyperparameters={"n_committees": 5, "neighbors": 1}
+            ),
+            StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [2, 10, 20]}
             ),
             StandardModel(
@@ -40,6 +45,13 @@ class TestStandardModelClass(unittest.TestCase):
                     "n_estimators": [50, 100],
                 },
             ),
+            StandardModel(
+                Model.CUBIST,
+                grid_search_hyperparameters={
+                    "neighbors": [1, 5],
+                    "n_committees": [1, 5, 10]
+                }
+            )
         ]
         self.methods = [
             SpectralPreprocessing.ABS,
@@ -78,6 +90,13 @@ class TestStandardModelClass(unittest.TestCase):
             Model.RF,
             {"max_features": "log2", "n_estimators": 50},
             {"max_features": ["log2", "auto"], "n_estimators": [50, 100]},
+        )
+        self.assertRaises(
+            AssertionError,
+            StandardModel,
+            Model.CUBIST,
+            {"neighbors": 1, "n_committees": 5},
+            {"neighbors": [1, 5], "n_committees": [1, 5, 10]},
         )
         for model in self.models:
             self.assertRaises(AssertionError, model.train, self.X, self.Y)

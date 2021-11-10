@@ -1,6 +1,7 @@
-from spectraxai.spectraxai import DatasetSplit
+from spectraxai.dataset import Dataset, DatasetSplit
+from spectraxai.spectra import SpectralPreprocessing
+from spectraxai.models import Model, StandardModel
 import pandas
-from spectraxai import Dataset, SpectralPreprocessing, StandardModel, Model
 import os
 
 DATA_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))

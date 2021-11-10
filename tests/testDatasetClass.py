@@ -1,6 +1,7 @@
 import unittest
 from .context import spectraxai
-from spectraxai import Dataset, DatasetSplit, SpectralPreprocessing, Scale
+from spectraxai.dataset import Dataset, DatasetSplit, Scale
+from spectraxai.spectra import SpectralPreprocessing
 import numpy as np
 
 
