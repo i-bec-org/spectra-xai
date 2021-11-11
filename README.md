@@ -27,6 +27,17 @@ or run
 python setup.py install
 ```
 
+## Update on jupyter.i-bec.org
+
+To update the package in our jupyter you need to:
+
+1. ssh into the VM as administrator
+2. change user to jupyter-administrator ```sudo su jupyter-administrator``` 
+3. activate the environment ```source /opt/tljh/user/bin/activate && source activate spectraxai```
+4. ```cd ~/installation_packages/spectra-xai``` where the installation files are located
+5. run ```git pull``` to update the installation files
+6. run ```sudo pip install .``` to install the update
+
 ## Running tests
 
 Tests may be run through command line by executing e.g.:
