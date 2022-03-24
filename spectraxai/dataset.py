@@ -122,6 +122,17 @@ class Dataset:
                 idx_trn.append(trn_index)
                 idx_tst.append(tst_index)
             return X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst
+        elif split == DatasetSplit.STRATIFIED:
+            skf = StratifiedKFold(n_splits=opt)
+            X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst = [], [], [], [], [], []
+            for trn_index, tst_index in skf.split(self.X):
+                X_trn.append(self.X[trn_index, :])
+                X_tst.append(self.X[tst_index, :])
+                Y_trn.append(self.Y[trn_index, :])
+                Y_tst.append(self.Y[tst_index, :])
+                idx_trn.append(trn_index)
+                idx_tst.append(tst_index)
+            return X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst
         else:
             raise RuntimeError("Not a valid split method!")
 
