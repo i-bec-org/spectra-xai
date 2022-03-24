@@ -30,6 +30,7 @@ class DatasetSplit(str, Enum):
     KENNARD_STONE = "Kennard-Stone"
     CLHS = "clhs"
     CROSS_VALIDATION = "cross-validation"
+    STRATIFIED = "stratified"
     
     def __str__(self):
         return self.name
