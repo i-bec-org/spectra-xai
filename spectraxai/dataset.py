@@ -103,7 +103,7 @@ class Dataset:
         if split != DatasetSplit.STRATIFIED:
             if split != DatasetSplit.CROSS_VALIDATION:
                 if opt <= 0 or opt >= 1:
-                    raise AssertionError("opt param should be in the (0, 1) range"
+                    raise AssertionError("opt param should be in the (0, 1) range")
             elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
                 raise AssertionError("opt param shoud be positive")
         elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
