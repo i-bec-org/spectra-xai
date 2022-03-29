@@ -3,7 +3,7 @@ import numpy as np
 from enum import Enum
 from numbers import Number
 from typing import Tuple, Dict, List, Any
-from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
