@@ -100,8 +100,12 @@ class Dataset:
             The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
         """
         indices = np.arange(self.X.shape[0])
-        if split != DatasetSplit.CROSS_VALIDATION and (opt <= 0 or opt >= 1):
-            raise AssertionError("opt param should be in the (0, 1) range")
+        if split != DatasetSplit.STRATIFIED:
+            if split != DatasetSplit.CROSS_VALIDATION:
+                if opt <= 0 or opt >= 1:
+                    raise AssertionError("opt param should be in the (0, 1) range"
+            elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
+                raise AssertionError("opt param shoud be positive")
         elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
             raise AssertionError("opt param shoud be positive")
         if split == DatasetSplit.RANDOM:
