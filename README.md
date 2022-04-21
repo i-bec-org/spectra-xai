@@ -27,6 +27,11 @@ or run
 python setup.py install
 ```
 
+Note that the cubist dependency requires a C compiler; in a Debian-based OS one can install it via:
+```
+sudo apt install build-essential
+```
+
 ## Update on jupyter.i-bec.org
 
 To update the package in our jupyter you need to:
