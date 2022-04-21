@@ -151,9 +151,8 @@ class TestDatasetClass(unittest.TestCase):
         self.assertTrue(np.all(np.abs(y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.STANDARD) - y_tst) < 1e-6))
 
         y_trn_scaled = Dataset(X_trn, y_trn).apply_scale_Y(Scale.MINMAX)
-        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(Scale.MINMAX, y_trn_scaled.get_scale_Y_props["params"],y_trn_scaled.get_scale_Y_props["attributes"])
+        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(Scale.MINMAX, y_trn_scaled.get_scale_Y_props["params"], y_trn_scaled.get_scale_Y_props["attributes"])
         self.assertTrue(np.all(np.abs(y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.MINMAX) - y_tst) < 1e-6))
-
 
 
 if __name__ == "__main__":

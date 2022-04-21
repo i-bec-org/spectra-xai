@@ -15,7 +15,7 @@ class Scale(str, Enum):
     """Scaling of an input feature (or of the output) supported by the `Dataset` class"""
     STANDARD = "standard"
     MINMAX = "min-max"
-    
+
     def __str__(self):
         return self.name
 
@@ -31,7 +31,7 @@ class DatasetSplit(str, Enum):
     CLHS = "clhs"
     CROSS_VALIDATION = "cross-validation"
     STRATIFIED = "stratified"
-    
+
     def __str__(self):
         return self.name
 
@@ -53,23 +53,23 @@ DataSplit = Tuple[
 class Dataset:
     """
     A general class to manage the dataset (i.e. X and Y).
-    
+
     Use this class to pass your 2D spectral matrix and 1D or 2D output properties.
-    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more. 
+    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more.
     """
 
     def __init__(self, X: np.ndarray, Y: np.ndarray):
         """
-        
+
         Parameters
         ----------
-        
+
         X: `numpy.ndarray`
             A 2D matrix of the spectra
-        
+
         Y: `numpy.ndarray`
             A 1D vector or 2D matrix of the output property(ies).
-            If 1D it will be implicitly converted to 2D. 
+            If 1D it will be implicitly converted to 2D.
         """
         if X.shape[0] != Y.shape[0]:
             raise AssertionError("X and Y don't have the same number of rows!")
@@ -82,18 +82,18 @@ class Dataset:
 
     def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
         """
-        Splits dataset with method split to train and test by trn percentage. 
-        
+        Splits dataset with method split to train and test by trn percentage.
+
         Parameters
         ----------
-        
+
         split: `DatasetSplit`
                 The method used to split the dataset
-        
+
         opt: `Number`
-                A float number (between 0 and 1) indicating the percetange of the training dataset for Random and Kennard Stone split.
+                A float number (between 0 and 1) indicating the percentage of the training dataset for Random and Kennard Stone split.
                 A physical number for Cross Validation split.
-        
+
         Returns
         -------
         `DataSplit`
@@ -145,8 +145,8 @@ class Dataset:
         self, trn: np.array = np.array([]), tst: np.array = np.array([])
     ) -> DataSplit:
         """
-        Splits dataset to train and test from pre-selected by the user trn or tst indices. 
-        
+        Splits dataset to train and test from pre-selected by the user trn or tst indices.
+
         Returns
         -------
         `DataSplit`

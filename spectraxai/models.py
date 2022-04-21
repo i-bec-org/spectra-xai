@@ -45,13 +45,13 @@ class StandardModel:
         """
         Parameters
         ----------
-        
+
         model: `Model`
                 Select a model from `Model` class.
-        
+
         best_hyperparameters: `dict`
-            A dictionary of pre-selected hyperparameters (e.g. a best model) 
-        
+            A dictionary of pre-selected hyperparameters (e.g. a best model)
+
         grid_search_hyperparameters: `dict`
             Specify custom grid search range for the hyperparameters
         """
@@ -106,8 +106,12 @@ class StandardModel:
         idx_tst: np.array = np.array([]),
         get_model: bool = False
     ):
-        """Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model"""
-        if preprocess == None:
+        """
+        Train the model giving the X, Y, preprocess sequence, idx_trn or idx_tst.
+
+        Returns a dict of the trained model
+        """
+        if preprocess is None:
             raise AssertionError("You need to specify Spectral Preprocessing Sequence")
         if idx_tst.size == 0 and idx_trn.size == 0:
             raise AssertionError("You need to specify either tst or trn indices or both")
@@ -156,14 +160,14 @@ class StandardModel:
             trn_t1 = time.time()
         else:
             if self.model == Model.SVR:
-                if not "gamma" in self.grid_search_hyperparameters:
+                if "gamma" not in self.grid_search_hyperparameters:
                     gamma = sigest(X_train)
                     self.grid_search_hyperparameters["gamma"] = np.linspace(
                         gamma[0], gamma[2], num=5
                     )
                 model = SVR(kernel="rbf", max_iter=5e8)
             elif self.model == Model.PLS:
-                if not "n_components" in self.grid_search_hyperparameters:
+                if "n_components" not in self.grid_search_hyperparameters:
                     self.grid_search_hyperparameters["n_components"] = np.arange(
                         1, min(100, X_train.shape[1]), 1
                     )
@@ -224,7 +228,7 @@ class StandardModel:
         idx_trn: np.array = np.array([]),
         idx_tst: np.array = np.array([]),
     ):
-        """Train the model giving the X, Y, list of preprocesses sequense, idx_trn or idx_tst. Returns a dataframe of the trained models"""
+        """Train the model giving the X, Y, list of preprocesses sequence, idx_trn or idx_tst. Returns a dataframe of the trained models"""
         if len(preprocesses) == 0:
             raise AssertionError(
                 "You need to specify a list of Spectral Preprocessing Sequence"
@@ -253,9 +257,9 @@ class StandardModel:
                 columns=common + ["max_features", "n_estimators", "feature_importance"]
             )
         elif self.model == Model.CUBIST:
-             dataFrame = pandas.DataFrame(
+            dataFrame = pandas.DataFrame(
                 columns=common + ["n_committees", "neighbors", "feature_importance"]
-            )           
+            )
         for preprocess in preprocesses:
             dataFrame.loc[len(dataFrame)] = self.train(
                 X, Y, preprocess, idx_trn, idx_tst

@@ -2,9 +2,10 @@ import ast
 import numpy as np
 from enum import Enum
 from scipy.signal import savgol_filter
-from typing import Union, Tuple, Dict, List, Any
+from typing import Union, Tuple, Dict, List
 
 from spectraxai.utils.continuumRemoval import continuum_removal
+
 
 class SpectralPreprocessing(str, Enum):
     """
