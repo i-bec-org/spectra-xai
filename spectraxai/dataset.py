@@ -105,9 +105,9 @@ class Dataset:
                 if opt <= 0 or opt >= 1:
                     raise AssertionError("opt param should be in the (0, 1) range")
             elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
-                raise AssertionError("opt param shoud be positive")
+                raise AssertionError("opt param should be positive")
         elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
-            raise AssertionError("opt param shoud be positive")
+            raise AssertionError("opt param should be positive")
         if split == DatasetSplit.RANDOM:
             return train_test_split(self.X, self.Y, indices, train_size=opt)
         elif split == DatasetSplit.KENNARD_STONE:
