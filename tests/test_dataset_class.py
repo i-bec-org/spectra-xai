@@ -22,6 +22,13 @@ class TestDatasetClass(unittest.TestCase):
         self.datasetY2dim = Dataset(X, Y)
         self.split_size = 0.6
 
+    def test_constructor(self):
+        X_del = np.delete(self.X, 1, 0)
+        # X and Y do not have the same number of rows
+        self.assertRaises(AssertionError, Dataset(X_del, self.Y))
+        # X is not a 2-D matrix
+        self.assertRaises(AssertionError, Dataset(self.y, self.Y))
+
     def _assert_X_size(self, X_trn, X_tst):
         self.assertTrue(X_trn.shape[1] == X_tst.shape[1] == self.nfeatures)
         self.assertTrue(X_trn.shape[0] == int(self.split_size * self.nsamples))
