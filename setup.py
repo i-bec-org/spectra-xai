@@ -27,10 +27,11 @@ setup(
         "cubist"
     ],
     extras_require={
-        'dev': [
-            'flake8',
-            'pytest',
-            'pytest-cov'
+        "dev": [
+            "flake8",
+            "pytest",
+            "pytest-cov",
+            "black"
         ]
     }
 )
