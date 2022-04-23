@@ -141,7 +141,7 @@ class StandardModel:
         #     ymean, ystd = np.mean(y_train), np.std(y_train)
         #     y_train = (y_train - ymean) / ystd
 
-        # Find optimal SVR RBF parameters through grid search and PLS n_components
+        # If hyperparameters are passed, use them; otherwise run grid search
         if len(self.best_hyperparameters) != 0:
             if self.model == Model.SVR:
                 model = SVR(kernel="rbf", max_iter=5e8)
@@ -156,7 +156,7 @@ class StandardModel:
                 model = Cubist()
                 model = model.set_params(**self.best_hyperparameters)
             trn_t0 = time.time()
-            model.fit(X_train, y_train)
+            model.fit(X_train, np.squeeze(y_train))
             trn_t1 = time.time()
         else:
             if self.model == Model.SVR:
@@ -184,7 +184,7 @@ class StandardModel:
                 n_jobs=-1,
                 verbose=0,
             )
-            grid_search.fit(X_train, y_train)
+            grid_search.fit(X_train, np.squeeze(y_train))
             trn_t1 = time.time()
             # grid_search.best_params_ has the best Parameters
             model = grid_search.best_estimator_
