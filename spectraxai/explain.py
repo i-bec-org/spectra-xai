@@ -42,6 +42,7 @@ def circular_bar_plot_importance(importance: List, x_labels: List = []) -> plt.A
     plt.axis("off")
 
     # Constants = parameters controling the plot layout:
+    upperLimit = 100
     lowerLimit = 30
     labelPadding = 4
 
@@ -51,8 +52,7 @@ def circular_bar_plot_importance(importance: List, x_labels: List = []) -> plt.A
     # Let's compute heights: they are a conversion of each item value in those new coordinates
     # In our example, 0 in the dataset will be converted to the lowerLimit (10)
     # The maximum will be converted to the upperLimit (100)
-    slope = (max - lowerLimit) / max
-    heights = slope * df.Value + lowerLimit
+    slope = (upperLimit - lowerLimit) / max
 
     # Compute the width of each bar. In total we have 2*Pi = 360°
     width = 2 * np.pi / len(df.index)
