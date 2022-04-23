@@ -271,13 +271,15 @@ class Dataset:
        """
         if len(set_attributes) == 0:
             raise AssertionError("You need to specify set_attributes")
+        if X.ndim not in [2, 3]:
+            raise AssertionError("X must be either a 2-D or a 3-D matrix")
         if X.ndim == 3:
             if method == Scale.STANDARD:
                 scaler = [[StandardScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
             elif method == Scale.MINMAX:
                 scaler = [[MinMaxScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
             for i in range(X.shape[2]):
-                X[:, :, i] = Dataset.__unscale_X_parser(X, method, scaler[i], set_params[i], set_attributes[i])
+                X[:, :, i] = Dataset.__unscale_X_parser(X[:, :, i], method, scaler[i], set_params[i], set_attributes[i])
         else:
             if method == Scale.STANDARD:
                 scaler = [StandardScaler() for _ in range(X.shape[1])]
@@ -291,7 +293,6 @@ class Dataset:
             if len(set_params) != 0:
                 scaler[i] = scaler[i].set_params(**set_params[i])
             scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
-            print(scaler[i], set_attributes[i])
             X[:, i] = scaler[i].inverse_transform(X[:, i].reshape(-1, 1)).flatten()
         return X
 
