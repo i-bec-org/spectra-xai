@@ -26,11 +26,6 @@ for i in range(len(idx_trn)):
     print("PLS - {0}/{1}".format(i+1, len(idx_trn)))
     for j in range(len(methods)):
         pls = StandardModel(Model.PLS)
+        # or, e.g. svr = StandardModel(Model.SVR)
         res = pls.train(X.to_numpy(), Y.to_numpy(), methods[j], idx_trn[i])
-        print("{0} - {1}".format(j+1, res))
-
-    print("SVR - {0}/{1}".format(i+1, len(idx_trn)))
-    for j in range(len(methods)):
-        svr = StandardModel(Model.SVR)
-        res = svr.train(X.to_numpy(), Y.to_numpy(), methods[j], idx_trn[i])
         print("{0} - {1}".format(j+1, res))
