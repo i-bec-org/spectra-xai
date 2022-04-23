@@ -32,6 +32,11 @@ Note that the cubist dependency requires a C compiler; in a Debian-based OS one 
 sudo apt install build-essential
 ```
 
+To install the development packages use:
+```
+pip install -e .[dev]
+```
+
 ## Update on jupyter.i-bec.org
 
 To update the package in our jupyter you need to:
