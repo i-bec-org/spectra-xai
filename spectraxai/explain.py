@@ -2,9 +2,10 @@ from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import pandas as pd
 
-from dataset import Dataset
+from spectraxai.dataset import Dataset
 
 
 def bar_plot_importance(
@@ -18,6 +19,10 @@ def bar_plot_importance(
     pos = np.arange(len(importance))
     ax.bar(pos, importance)
     ax.set_xticks(pos, x_labels)
+    ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins="auto"))
+    ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+    ax.set_xlabel("Wavelength")
+    ax.set_ylabel("Importance")
     return ax
 
 
