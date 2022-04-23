@@ -23,11 +23,11 @@ class TestDatasetClass(unittest.TestCase):
         self.split_size = 0.6
 
     def test_constructor(self):
-        X_del = np.delete(self.X, 1, 0)
+        X_del = np.delete(self.datasetY1dim.X, 1, 0)
         # X and Y do not have the same number of rows
-        self.assertRaises(AssertionError, Dataset(X_del, self.Y))
+        self.assertRaises(AssertionError, Dataset, X_del, self.datasetY1dim.Y)
         # X is not a 2-D matrix
-        self.assertRaises(AssertionError, Dataset(self.y, self.Y))
+        self.assertRaises(AssertionError, Dataset, np.array(list(range(self.nsamples))), self.datasetY1dim.Y)
 
     def _assert_X_size(self, X_trn, X_tst):
         self.assertTrue(X_trn.shape[1] == X_tst.shape[1] == self.nfeatures)
