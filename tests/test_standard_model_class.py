@@ -25,7 +25,7 @@ class TestStandardModelClass(unittest.TestCase):
             ),
             StandardModel(
                 Model.CUBIST,
-                best_hyperparameters={"n_committees": 5, "neighbors": 1}
+                best_hyperparameters={"n_committees": 5, "neighbors": 1, "composite": True}
             ),
             StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [2, 10, 20]}
@@ -49,7 +49,8 @@ class TestStandardModelClass(unittest.TestCase):
                 Model.CUBIST,
                 grid_search_hyperparameters={
                     "neighbors": [1, 5],
-                    "n_committees": [1, 5, 10]
+                    "n_committees": [1, 5, 10],
+                    "composite": [True]
                 }
             )
         ]
