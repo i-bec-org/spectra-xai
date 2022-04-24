@@ -53,7 +53,15 @@ To update the package in our jupyter you need to:
 Tests may be run through command line by executing e.g.:
 
 ```
-python -m unittest tests/testStandardModelClass.py
+pytest --ignore=examples --doctest-modules --html=report.html --cov=. --cov-report=html
+```
+
+## Building documentation
+
+Documentation may be generate via:
+
+```
+pdoc -o html spectraxai
 ```
 
 ## Examples
