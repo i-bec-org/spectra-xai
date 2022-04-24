@@ -66,7 +66,7 @@ class Dataset:
         ----------
 
         X: `numpy.ndarray`
-            A 2D matrix of the spectra
+            A 2D matrix of the spectra of size (n_samples, n_features)
 
         Y: `numpy.ndarray`
             A 1D vector or 2D matrix of the output property(ies).
@@ -211,16 +211,20 @@ class Dataset:
     def corr(self) -> List:
         """Calculate Pearson's correlation between all input features and the output
 
-        Returns:
-            List: A 2-D list containing the correlation for each output property
+        Return
+        ------
+        `np.ndarray`
+            A 2-D np.array containing the correlation for each output property
         """
-        return [
+        return np.array(
             [
-                np.corrcoef(self.X[:, i], self.Y[:, j])[0][1]
-                for i in range(self.X.shape[1])
+                [
+                    np.corrcoef(self.X[:, i], self.Y[:, j])[0][1]
+                    for i in range(self.X.shape[1])
+                ]
+                for j in range(self.Y.shape[1])
             ]
-            for j in range(self.Y.shape[1])
-        ]
+        )
 
     def apply_unscale_X(
         self,
@@ -250,7 +254,7 @@ class Dataset:
         Returns
         -------
         `numpy.ndarray`
-            The original X matrix of the spectra. If X, set_params and set_attributes have given for parameters.
+            The original X matrix of the spectra. If X, set_params and set_attributes have been given for parameters.
         or
         `Dataset`
             A Dataset object.
@@ -490,7 +494,7 @@ class Dataset:
         Returns
         -------
         `numpy.ndarray`
-            The original 1D or 2D matrix Y. If Y, set_params and set_attributes have given for parameters.
+            The original 1D or 2D matrix Y. If Y, set_params and set_attributes have been given for parameters.
         or
         `Dataset`
             A Dataset object.

@@ -13,13 +13,21 @@ def bar_plot_importance(
 ) -> plt.Axes:
     """Plots a bar plot of the feature importance
 
-    Args:
-        importance (List): A list containing the importance of each feature
-        x_labels (List, optional): The feature labels, i.e. the wavelengths. Defaults to [].
-        ax (plt.Axes, optional): An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+    Parameters
+    ----------
+    importance: `List`
+        A list containing the importance of each feature
 
-    Returns:
-        plt.Axes: _description_
+    x_labels: `List`
+        The feature labels, i.e. the wavelengths. Defaults to [].
+
+    ax: `plt.Axes
+        An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+
+    Return
+    ------
+    `plt.Axes`
+        The matplotlib axes with the plot
     """
     if ax is None:
         plt.figure()
@@ -39,13 +47,21 @@ def bar_plot_importance(
 def circular_bar_plot_importance(importance: List, x_labels: List = []) -> plt.Axes:
     """Plots a circular (spiral) bar plot of the feature importance
 
-    Args:
-        importance (List): A list containing the importance of each feature
-        x_labels (List, optional): The feature labels, i.e. the wavelengths. Defaults to [].
-        ax (plt.Axes, optional): An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+    Parameters
+    ----------
+    importance: `List`
+        A list containing the importance of each feature
 
-    Returns:
-        plt.Axes: _description_
+    x_labels: `List`
+        The feature labels, i.e. the wavelengths. Defaults to [].
+
+    ax: `plt.Axes
+        An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+
+    Return
+    ------
+    `plt.Axes`
+        The matplotlib axes with the plot
     """
     if not x_labels:
         x_labels = ["X{0}".format(i) for i in range(len(importance))]
@@ -121,5 +137,19 @@ def circular_bar_plot_importance(importance: List, x_labels: List = []) -> plt.A
     return ax
 
 
-def correlogram(dataset: Dataset):
-    pass
+def correlogram(dataset: Dataset, top: int = 5):
+    fig, axes = plt.subplots(
+        dataset.n_outputs, top, figsize=(11.69, 8.27), squeeze=False
+    )
+    for i, corr in enumerate(dataset.corr()):
+        ind = np.argpartition(np.abs(corr), -top)[-top:]
+        ind = ind[np.argsort(corr[ind])]
+        for j in range(top):
+            x, y = dataset.X[:, ind[j]], dataset.Y[:, i]
+            axes[i, j].scatter(x=x, y=y)
+            m, b = np.polyfit(x, y, 1)
+            axes[i, j].plot(x, m * x + b, c="k")
+            axes[i, j].set_title("Correlation {0:.2f}".format(corr[ind[j]]))
+            axes[i, j].set_xlabel("Feature {0}".format(ind[j]))
+            axes[i, j].set_ylabel("Output {0}".format(i + 1))
+    return axes

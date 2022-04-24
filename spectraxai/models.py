@@ -47,7 +47,7 @@ class StandardModel:
         ----------
 
         model: `Model`
-                Select a model from `Model` class.
+            Select a model from `Model` class.
 
         best_hyperparameters: `dict`
             A dictionary of pre-selected hyperparameters (e.g. a best model)
@@ -109,15 +109,28 @@ class StandardModel:
 
         Pass here the whole dataset of (X, Y) and either specify idx_trn (training indices) or idx_tst (testing indices).
 
-        Args:
-            dataset (Dataset): the Dataset to train the model
-            preprocess (SpectralPreprocessingSequence, optional): Optional pre-processing sequence. Defaults to SpectralPreprocessing.NONE.
-            idx_trn (np.array, optional): The indices of the trn samples. Defaults to np.array([]).
-            idx_tst (np.array, optional): The indices of the tst samples. Defaults to np.array([]).
-            get_model (bool, optional): If true, also return the generated model. Defaults to False.
+        Parameters
+        ----------
 
-        Returns:
-            List[Dict]: A dictionary containing the accuracy results and assorted metadata for each output property
+        dataset: `spectraxai.dataset.Dataset`
+            the Dataset to train the model
+
+        preprocess: `spectraxai.spectra.SpectralPreprocessingSequence`
+            Optional pre-processing sequence. Defaults to SpectralPreprocessing.NONE.
+
+        idx_trn: `np.array`
+            The indices of the trn samples. Defaults to np.array([]).
+
+        idx_tst: `np.array`
+            The indices of the tst samples. Defaults to np.array([]).
+
+        get_model: `bool`
+            If true, also return the generated model. Defaults to False.
+
+        Returns
+        -------
+        `List[Dict]`
+            A dictionary containing the accuracy results and assorted metadata for each output property
         """
 
         if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
@@ -243,14 +256,24 @@ class StandardModel:
 
         A short-hand version to quickly test different pre-treatments, calling the train function
 
-        Args:
-            dataset (Dataset): the Dataset to train the model
-            preprocesses (List[SpectralPreprocessingSequence], optional): List of pre-processing sequences to test. Defaults to [].
-            idx_trn (np.array, optional): The indices of the trn samples. Defaults to np.array([]).
-            idx_tst (np.array, optional): The indices of the tst samples. Defaults to np.array([]).
+        Parameters
+        ----------
+        dataset: `spectraxai.dataset.Dataset`
+            the Dataset to train the model
 
-        Returns:
-            pandas.DataFrame: Returns a dataframe with the results of the trained models. By default, no model is returned to keep a low memory footprint.
+        preprocesses: `spectraxai.spectra.List[SpectralPreprocessingSequence]`
+            List of pre-processing sequences to test. Defaults to [].
+
+        idx_trn: `np.array`
+            The indices of the trn samples. Defaults to np.array([]).
+
+        idx_tst: `np.array`
+            The indices of the tst samples. Defaults to np.array([]).
+
+        Returns
+        -------
+        `pandas.DataFrame`
+            Returns a dataframe with the results of the trained models. By default, no model is returned to keep a low memory footprint.
         """
         if len(preprocesses) == 0:
             raise AssertionError(
