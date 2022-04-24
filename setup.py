@@ -15,9 +15,19 @@ with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
 # This call to setup() does all the work
 setup(
     name="spectraxai",
-    version="0.2.1",
+    version="0.3.0",
     packages=find_packages(include=["spectraxai", "spectraxai.utils"]),
     python_requires=">=3.6",
     install_requires=["pandas", "numpy", "scipy", "sklearn", "matplotlib", "cubist"],
-    extras_require={"dev": ["flake8", "pytest", "pytest-cov", "black", "ipykernel"]},
+    extras_require={
+        "dev": [
+            "flake8",
+            "pytest",
+            "pytest-cov",
+            "pytest-html",
+            "black",
+            "ipykernel",
+            "pdoc",
+        ]
+    },
 )
