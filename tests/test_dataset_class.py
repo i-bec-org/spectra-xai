@@ -22,6 +22,18 @@ class TestDatasetClass(unittest.TestCase):
         self.datasetY2dim = Dataset(X, Y)
         self.split_size = 0.6
 
+    def test_constructor(self):
+        X_del = np.delete(self.datasetY1dim.X, 1, 0)
+        # X and Y do not have the same number of rows
+        self.assertRaises(AssertionError, Dataset, X_del, self.datasetY1dim.Y)
+        # X is not a 2-D matrix
+        self.assertRaises(
+            AssertionError,
+            Dataset,
+            np.array(list(range(self.nsamples))),
+            self.datasetY1dim.Y,
+        )
+
     def _assert_X_size(self, X_trn, X_tst):
         self.assertTrue(X_trn.shape[1] == X_tst.shape[1] == self.nfeatures)
         self.assertTrue(X_trn.shape[0] == int(self.split_size * self.nsamples))
@@ -113,8 +125,28 @@ class TestDatasetClass(unittest.TestCase):
 
     def test_scale_X(self):
         X = self.datasetY2dim.X
-        self.assertTrue(np.all(np.abs(self.datasetY2dim.apply_scale_X(Scale.STANDARD).apply_unscale_X(Scale.STANDARD).X - X) < 1e-6))
-        self.assertTrue(np.all(np.abs(self.datasetY2dim.apply_scale_X(Scale.MINMAX).apply_unscale_X(Scale.MINMAX).X - X) < 1e-6))
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    self.datasetY2dim.apply_scale_X(Scale.STANDARD)
+                    .apply_unscale_X(Scale.STANDARD)
+                    .X
+                    - X
+                )
+                < 1e-6
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    self.datasetY2dim.apply_scale_X(Scale.MINMAX)
+                    .apply_unscale_X(Scale.MINMAX)
+                    .X
+                    - X
+                )
+                < 1e-6
+            )
+        )
 
         methods = [
             SpectralPreprocessing.ABS,
@@ -127,33 +159,123 @@ class TestDatasetClass(unittest.TestCase):
         ]
         X = self.datasetY1dim.preprocess_3D(methods)
         X_scaled, props = Dataset.scale_X(X, Scale.STANDARD)
-        self.assertTrue(np.all(np.abs(Dataset.unscale_X(X_scaled, Scale.STANDARD, props["params"], props["attributes"]) - X) < 1e-6))
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    Dataset.unscale_X(
+                        X_scaled, Scale.STANDARD, props["params"], props["attributes"]
+                    )
+                    - X
+                )
+                < 1e-6
+            )
+        )
         X_scaled, props = Dataset.scale_X(X, Scale.MINMAX)
-        self.assertTrue(np.all(np.abs(Dataset.unscale_X(X_scaled, Scale.MINMAX, props["params"], props["attributes"]) - X) < 1e-6))
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    Dataset.unscale_X(
+                        X_scaled, Scale.MINMAX, props["params"], props["attributes"]
+                    )
+                    - X
+                )
+                < 1e-6
+            )
+        )
 
     def test_scale_Y(self):
         y = self.datasetY1dim.Y
-        self.assertTrue(np.all(np.abs(
-            self.datasetY1dim.apply_scale_Y(Scale.STANDARD).apply_unscale_Y(Scale.STANDARD).Y - y) < 1e-6))
-        self.assertTrue(np.all(np.abs(
-            self.datasetY1dim.apply_scale_Y(Scale.MINMAX).apply_unscale_Y(Scale.MINMAX).Y - y) < 1e-6))
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    self.datasetY1dim.apply_scale_Y(Scale.STANDARD)
+                    .apply_unscale_Y(Scale.STANDARD)
+                    .Y
+                    - y
+                )
+                < 1e-6
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    self.datasetY1dim.apply_scale_Y(Scale.MINMAX)
+                    .apply_unscale_Y(Scale.MINMAX)
+                    .Y
+                    - y
+                )
+                < 1e-6
+            )
+        )
 
         Y = self.datasetY2dim.Y
-        self.assertTrue(np.all(np.abs(
-            self.datasetY2dim.apply_scale_Y(Scale.STANDARD).apply_unscale_Y(Scale.STANDARD).Y - Y) < 1e-6))
-        self.assertTrue(np.all(np.abs(
-            self.datasetY2dim.apply_scale_Y(Scale.MINMAX).apply_unscale_Y(Scale.MINMAX).Y - Y) < 1e-6))
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    self.datasetY2dim.apply_scale_Y(Scale.STANDARD)
+                    .apply_unscale_Y(Scale.STANDARD)
+                    .Y
+                    - Y
+                )
+                < 1e-6
+            )
+        )
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    self.datasetY2dim.apply_scale_Y(Scale.MINMAX)
+                    .apply_unscale_Y(Scale.MINMAX)
+                    .Y
+                    - Y
+                )
+                < 1e-6
+            )
+        )
 
-        X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst = self.datasetY2dim.train_test_split(DatasetSplit.KENNARD_STONE, self.split_size)
+        (
+            X_trn,
+            X_tst,
+            y_trn,
+            y_tst,
+            idx_trn,
+            idx_tst,
+        ) = self.datasetY2dim.train_test_split(
+            DatasetSplit.KENNARD_STONE, self.split_size
+        )
 
         y_trn_scaled = Dataset(X_trn, y_trn).apply_scale_Y(Scale.STANDARD)
-        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(Scale.STANDARD, y_trn_scaled.get_scale_Y_props["params"], y_trn_scaled.get_scale_Y_props["attributes"])
-        self.assertTrue(np.all(np.abs(y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.STANDARD) - y_tst) < 1e-6))
+        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(
+            Scale.STANDARD,
+            y_trn_scaled.get_scale_Y_props["params"],
+            y_trn_scaled.get_scale_Y_props["attributes"],
+        )
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    y_trn_scaled.apply_unscale_Y(
+                        Y=y_tst_scaled.Y, method=Scale.STANDARD
+                    )
+                    - y_tst
+                )
+                < 1e-6
+            )
+        )
 
         y_trn_scaled = Dataset(X_trn, y_trn).apply_scale_Y(Scale.MINMAX)
-        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(Scale.MINMAX, y_trn_scaled.get_scale_Y_props["params"],y_trn_scaled.get_scale_Y_props["attributes"])
-        self.assertTrue(np.all(np.abs(y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.MINMAX) - y_tst) < 1e-6))
-
+        y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(
+            Scale.MINMAX,
+            y_trn_scaled.get_scale_Y_props["params"],
+            y_trn_scaled.get_scale_Y_props["attributes"],
+        )
+        self.assertTrue(
+            np.all(
+                np.abs(
+                    y_trn_scaled.apply_unscale_Y(Y=y_tst_scaled.Y, method=Scale.MINMAX)
+                    - y_tst
+                )
+                < 1e-6
+            )
+        )
 
 
 if __name__ == "__main__":

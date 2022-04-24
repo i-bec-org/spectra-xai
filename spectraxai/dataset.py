@@ -13,9 +13,10 @@ from spectraxai.spectra import Spectra, SpectralPreprocessingSequence
 
 class Scale(str, Enum):
     """Scaling of an input feature (or of the output) supported by the `Dataset` class"""
+
     STANDARD = "standard"
     MINMAX = "min-max"
-    
+
     def __str__(self):
         return self.name
 
@@ -31,7 +32,7 @@ class DatasetSplit(str, Enum):
     CLHS = "clhs"
     CROSS_VALIDATION = "cross-validation"
     STRATIFIED = "stratified"
-    
+
     def __str__(self):
         return self.name
 
@@ -53,23 +54,23 @@ DataSplit = Tuple[
 class Dataset:
     """
     A general class to manage the dataset (i.e. X and Y).
-    
+
     Use this class to pass your 2D spectral matrix and 1D or 2D output properties.
-    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more. 
+    Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more.
     """
 
     def __init__(self, X: np.ndarray, Y: np.ndarray):
         """
-        
+
         Parameters
         ----------
-        
+
         X: `numpy.ndarray`
-            A 2D matrix of the spectra
-        
+            A 2D matrix of the spectra of size (n_samples, n_features)
+
         Y: `numpy.ndarray`
             A 1D vector or 2D matrix of the output property(ies).
-            If 1D it will be implicitly converted to 2D. 
+            If 1D it will be implicitly converted to 2D.
         """
         if X.shape[0] != Y.shape[0]:
             raise AssertionError("X and Y don't have the same number of rows!")
@@ -79,21 +80,24 @@ class Dataset:
         if isinstance(Y, pandas.DataFrame) or isinstance(Y, pandas.Series):
             Y = Y.to_numpy()
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
+        self.n_samples = self.X.shape[0]
+        self.n_features = self.X.shape[1]
+        self.n_outputs = self.Y.shape[1]
 
     def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
         """
-        Splits dataset with method split to train and test by trn percentage. 
-        
+        Splits dataset with method split to train and test by trn percentage.
+
         Parameters
         ----------
-        
+
         split: `DatasetSplit`
                 The method used to split the dataset
-        
+
         opt: `Number`
-                A float number (between 0 and 1) indicating the percetange of the training dataset for Random and Kennard Stone split.
-                A physical number for Cross Validation split.
-        
+                A float number (between 0 and 1) indicating the percentage of the training dataset for Random and Kennard Stone split.
+                A natural number for Cross Validation split.
+
         Returns
         -------
         `DataSplit`
@@ -105,9 +109,9 @@ class Dataset:
                 if opt <= 0 or opt >= 1:
                     raise AssertionError("opt param should be in the (0, 1) range")
             elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
-                raise AssertionError("opt param shoud be positive")
+                raise AssertionError("opt param should be positive")
         elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
-            raise AssertionError("opt param shoud be positive")
+            raise AssertionError("opt param should be positive")
         if split == DatasetSplit.RANDOM:
             return train_test_split(self.X, self.Y, indices, train_size=opt)
         elif split == DatasetSplit.KENNARD_STONE:
@@ -145,8 +149,8 @@ class Dataset:
         self, trn: np.array = np.array([]), tst: np.array = np.array([])
     ) -> DataSplit:
         """
-        Splits dataset to train and test from pre-selected by the user trn or tst indices. 
-        
+        Splits dataset to train and test from pre-selected by the user trn or tst indices.
+
         Returns
         -------
         `DataSplit`
@@ -164,21 +168,20 @@ class Dataset:
 
     def preprocess(self, method: SpectralPreprocessingSequence):
         """
-            Preprocess dataset by method.
+        Preprocess dataset by method.
 
-            Parameters
-            ----------
+        Parameters
+        ----------
 
-            method: `SpectralPreprocessingSequence`
-                The method for the preprocess.
+        method: `SpectralPreprocessingSequence`
+            The method for the preprocess.
 
-            Returns
-            -------
-            `Dataset`
-                A Dataset object.
+        Returns
+        -------
+        `Dataset`
+            A Dataset object.
         """
-        self.X = self.__preprocess(self.X, method)
-        return self
+        return Dataset(self.__preprocess(self.X, method), self.Y)
 
     def preprocess_3D(self, methods: List[SpectralPreprocessingSequence]):
         """
@@ -205,39 +208,71 @@ class Dataset:
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
 
+    def corr(self) -> List:
+        """Calculate Pearson's correlation between all input features and the output
+
+        Return
+        ------
+        `np.ndarray`
+            A 2-D np.array containing the correlation for each output property
+        """
+        return np.array(
+            [
+                [
+                    np.corrcoef(self.X[:, i], self.Y[:, j])[0][1]
+                    for i in range(self.X.shape[1])
+                ]
+                for j in range(self.Y.shape[1])
+            ]
+        )
+
     def apply_unscale_X(
-        self, method: Scale, set_params: List = [], set_attributes: List = [], X: np.ndarray = np.array([])
+        self,
+        method: Scale,
+        set_params: List = [],
+        set_attributes: List = [],
+        X: np.ndarray = np.array([]),
     ):
         """
-            Unscale X matrix of the spectra with Scale method.
+        Unscale X matrix of the spectra with Scale method.
 
-            Parameters
-            ----------
+        Parameters
+        ----------
 
-            method: `Scale`
-                    The method is used to scale X
+        method: `Scale`
+                The method is used to scale X
 
-            set_params: `List`
-                    A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-            set_attributes: `List`
-                    A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
-            X: `numpy.ndarray`
-                    A 2D or 3D matrix of the spectra for scaled X hat
+        X: `numpy.ndarray`
+                A 2D or 3D matrix of the spectra for scaled X hat
 
-            Returns
-            -------
-            `numpy.ndarray`
-                The original X matrix of the spectra. If X, set_params and set_attributes have given for parameters.
-            or
-            `Dataset`
-                A Dataset object.
+        Returns
+        -------
+        `numpy.ndarray`
+            The original X matrix of the spectra. If X, set_params and set_attributes have been given for parameters.
+        or
+        `Dataset`
+            A Dataset object.
         """
         if X.size > 0 and len(self.get_scale_X_props) > 0:
-            return Dataset.unscale_X(X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
+            return Dataset.unscale_X(
+                X,
+                method,
+                self.get_scale_X_props["params"],
+                self.get_scale_X_props["attributes"],
+            )
         elif len(self.get_scale_X_props) > 0:
-            self.X = Dataset.unscale_X(self.X, method, self.get_scale_X_props["params"], self.get_scale_X_props["attributes"])
+            self.X = Dataset.unscale_X(
+                self.X,
+                method,
+                self.get_scale_X_props["params"],
+                self.get_scale_X_props["attributes"],
+            )
         else:
             self.X = Dataset.unscale_X(self.X, method, set_params, set_attributes)
         return self
@@ -246,77 +281,98 @@ class Dataset:
         X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
-           Static unscale for X matrix of the spectra with Scale method.
+        Static unscale for X matrix of the spectra with Scale method.
 
-           Parameters
-           ----------
+        Parameters
+        ----------
 
-           X: `numpy.ndarray`
-                   A 2D or 3D scaled matrix of the spectra.
+        X: `numpy.ndarray`
+                A 2D or 3D scaled matrix of the spectra.
 
-           method: `Scale`
-                   The method is used to scale X
+        method: `Scale`
+                The method is used to scale X
 
-           set_params: `List`
-                   A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-           set_attributes: `List`
-                   A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
 
-           Returns
-           -------
-           `numpy.ndarray`
-               The original X matrix of the spectra.
-       """
+        Returns
+        -------
+        `numpy.ndarray`
+            The original X matrix of the spectra.
+        """
         if len(set_attributes) == 0:
             raise AssertionError("You need to specify set_attributes")
+        if X.ndim not in [2, 3]:
+            raise AssertionError("X must be either a 2-D or a 3-D matrix")
         if X.ndim == 3:
             if method == Scale.STANDARD:
-                scaler = [[StandardScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
+                scaler = [
+                    [StandardScaler() for _ in range(X.shape[1])]
+                    for _ in range(X.shape[2])
+                ]
             elif method == Scale.MINMAX:
-                scaler = [[MinMaxScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
+                scaler = [
+                    [MinMaxScaler() for _ in range(X.shape[1])]
+                    for _ in range(X.shape[2])
+                ]
             for i in range(X.shape[2]):
-                X[:, :, i] = Dataset.__unscale_X_parser(X, method, scaler[i], set_params[i], set_attributes[i])
+                X[:, :, i] = Dataset.__unscale_X_parser(
+                    X[:, :, i], method, scaler[i], set_params[i], set_attributes[i]
+                )
         else:
             if method == Scale.STANDARD:
                 scaler = [StandardScaler() for _ in range(X.shape[1])]
             elif method == Scale.MINMAX:
                 scaler = [MinMaxScaler() for _ in range(X.shape[1])]
-            X = Dataset.__unscale_X_parser(X, method, scaler, set_params[0], set_attributes[0])
+            X = Dataset.__unscale_X_parser(
+                X, method, scaler, set_params[0], set_attributes[0]
+            )
         return X
 
-    def __unscale_X_parser(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+    def __unscale_X_parser(
+        X: np.ndarray,
+        method: Scale,
+        scaler: Any,
+        set_params: Dict,
+        set_attributes: Dict,
+    ):
         for i in range(X.shape[1]):
             if len(set_params) != 0:
                 scaler[i] = scaler[i].set_params(**set_params[i])
-            scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
-            print(scaler[i], set_attributes[i])
+            scaler[i] = Dataset.__set_scale_attributes(
+                method, scaler[i], set_attributes[i]
+            )
             X[:, i] = scaler[i].inverse_transform(X[:, i].reshape(-1, 1)).flatten()
         return X
 
-    def apply_scale_X(self, method: Scale, set_params: List = [], set_attributes: List = []):
+    def apply_scale_X(
+        self, method: Scale, set_params: List = [], set_attributes: List = []
+    ):
         """
-           Scale X matrix of the spectra with Scale method.
+        Scale X matrix of the spectra with Scale method.
 
-           Parameters
-           ----------
+        Parameters
+        ----------
 
-           method: `Scale`
-                   The method used is to scale 2D or 3D X matrix of the spectra.
+        method: `Scale`
+                The method used is to scale 2D or 3D X matrix of the spectra.
 
-           set_params: `List`
-                   A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-           set_attributes: `List`
-                   A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
 
-           Returns
-           -------
-           `Dataset`
-                A Dataset object.
-       """
+        Returns
+        -------
+        `Dataset`
+             A Dataset object.
+        """
         self.X, self.get_scale_X_props = Dataset.scale_X(
             self.X, method, set_params, set_attributes
         )
@@ -326,38 +382,50 @@ class Dataset:
         X: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
-           Static scale method of X matrix of the spectra with Scale method.
+        Static scale method of X matrix of the spectra with Scale method.
 
-           Parameters
-           ----------
+        Parameters
+        ----------
 
-           X: `numpy.ndarray`
-                   A 2D or 3D matrix of the spectra.
+        X: `numpy.ndarray`
+                A 2D or 3D matrix of the spectra.
 
-           method: `Scale`
-                   The method is used to scale X
+        method: `Scale`
+                The method is used to scale X
 
-           set_params: `List`
-                   A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-           set_attributes: `List`
-                   A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
 
-           Returns
-           -------
-           `Dataset`
-                A Dataset object.
-       """
+        Returns
+        -------
+        `Dataset`
+             A Dataset object.
+        """
         if X.ndim == 3:
             if method == Scale.STANDARD:
-                scaler = [[StandardScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
+                scaler = [
+                    [StandardScaler() for _ in range(X.shape[1])]
+                    for _ in range(X.shape[2])
+                ]
             elif method == Scale.MINMAX:
-                scaler = [[MinMaxScaler() for _ in range(X.shape[1])] for _ in range(X.shape[2])]
+                scaler = [
+                    [MinMaxScaler() for _ in range(X.shape[1])]
+                    for _ in range(X.shape[2])
+                ]
             get_params = []
             get_attributes = []
             for i in range(X.shape[2]):
-                X[:, :, i], params, attributes = Dataset.__scale_X_parser(X[:, :, i], method, scaler[i], set_params[i] if len(set_params) else [], set_attributes[i] if len(set_attributes) else [])
+                X[:, :, i], params, attributes = Dataset.__scale_X_parser(
+                    X[:, :, i],
+                    method,
+                    scaler[i],
+                    set_params[i] if len(set_params) else [],
+                    set_attributes[i] if len(set_attributes) else [],
+                )
                 get_params.append(params)
                 get_attributes.append(attributes)
         else:
@@ -365,54 +433,86 @@ class Dataset:
                 scaler = [StandardScaler() for _ in range(X.shape[1])]
             elif method == Scale.MINMAX:
                 scaler = [MinMaxScaler() for _ in range(X.shape[1])]
-            X, params, attributes = Dataset.__scale_X_parser(X, method, scaler, set_params[0] if len(set_params) else [], set_attributes[0] if len(set_attributes) else [])
+            X, params, attributes = Dataset.__scale_X_parser(
+                X,
+                method,
+                scaler,
+                set_params[0] if len(set_params) else [],
+                set_attributes[0] if len(set_attributes) else [],
+            )
             get_params = [params]
             get_attributes = [attributes]
         return X, {"params": get_params, "attributes": get_attributes}
 
-    def __scale_X_parser(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+    def __scale_X_parser(
+        X: np.ndarray,
+        method: Scale,
+        scaler: Any,
+        set_params: Dict,
+        set_attributes: Dict,
+    ):
         get_params = []
         get_attributes = []
         for i in range(X.shape[1]):
-            temp_X, params, attributes = Dataset.__scale_X(X[:, i].reshape(-1, 1), method, scaler[i], set_params[i] if len(set_params) else {}, set_attributes[i] if len(set_attributes) else {})
+            temp_X, params, attributes = Dataset.__scale_X(
+                X[:, i].reshape(-1, 1),
+                method,
+                scaler[i],
+                set_params[i] if len(set_params) else {},
+                set_attributes[i] if len(set_attributes) else {},
+            )
             X[:, i] = temp_X.flatten()
             get_params.append(params)
             get_attributes.append(attributes)
         return X, get_params, get_attributes
 
     def apply_unscale_Y(
-        self, method: Scale, set_params: List = [], set_attributes: List = [], Y: np.ndarray = np.array([])
+        self,
+        method: Scale,
+        set_params: List = [],
+        set_attributes: List = [],
+        Y: np.ndarray = np.array([]),
     ):
         """
-            Unscale a 1D vector or 2D matrix of the output property(ies) with Scale method.
+        Unscale a 1D vector or 2D matrix of the output property(ies) with Scale method.
 
-            Parameters
-            ----------
+        Parameters
+        ----------
 
-            method: `Scale`
-                    The method is used to scale Y
+        method: `Scale`
+                The method is used to scale Y
 
-            set_params: `List`
-                    A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-            set_attributes: `List`
-                    A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
-            Y: `numpy.ndarray`
-                    A 1D vector or 2D matrix of the output property(ies).
+        Y: `numpy.ndarray`
+                A 1D vector or 2D matrix of the output property(ies).
 
-            Returns
-            -------
-            `numpy.ndarray`
-                The original 1D or 2D matrix Y. If Y, set_params and set_attributes have given for parameters.
-            or
-            `Dataset`
-                A Dataset object.
+        Returns
+        -------
+        `numpy.ndarray`
+            The original 1D or 2D matrix Y. If Y, set_params and set_attributes have been given for parameters.
+        or
+        `Dataset`
+            A Dataset object.
         """
         if Y.size > 0 and len(self.get_scale_Y_props) > 0:
-            return Dataset.unscale_Y(Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
+            return Dataset.unscale_Y(
+                Y,
+                method,
+                self.get_scale_Y_props["params"],
+                self.get_scale_Y_props["attributes"],
+            )
         elif len(self.get_scale_Y_props) > 0:
-            self.Y = Dataset.unscale_Y(self.Y, method, self.get_scale_Y_props["params"], self.get_scale_Y_props["attributes"])
+            self.Y = Dataset.unscale_Y(
+                self.Y,
+                method,
+                self.get_scale_Y_props["params"],
+                self.get_scale_Y_props["attributes"],
+            )
         else:
             self.Y = Dataset.unscale_Y(self.Y, method, set_params, set_attributes)
         return self
@@ -421,29 +521,29 @@ class Dataset:
         Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
-           Static unscale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
+        Static unscale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
 
-           Parameters
-           ----------
+        Parameters
+        ----------
 
-           Y: `numpy.ndarray`
-                   A scaled 1D vector or 2D matrix of the output property(ies)
+        Y: `numpy.ndarray`
+                A scaled 1D vector or 2D matrix of the output property(ies)
 
-           method: `Scale`
-                   The method is used to scale Y
+        method: `Scale`
+                The method is used to scale Y
 
-           set_params: `List`
-                   A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-           set_attributes: `List`
-                   A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
 
-           Returns
-           -------
-           `numpy.ndarray`
-               The original 1D or 2D matrix Y
-       """
+        Returns
+        -------
+        `numpy.ndarray`
+            The original 1D or 2D matrix Y
+        """
         if len(set_attributes) == 0:
             raise AssertionError("You need to specify set_attributes")
         if method == Scale.STANDARD:
@@ -453,37 +553,46 @@ class Dataset:
         Y = Dataset.__unscale_Y_parser(Y, method, scaler, set_params, set_attributes)
         return Y
 
-    def __unscale_Y_parser(Y: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+    def __unscale_Y_parser(
+        Y: np.ndarray,
+        method: Scale,
+        scaler: Any,
+        set_params: Dict,
+        set_attributes: Dict,
+    ):
         for i in range(Y.shape[1]):
             if len(set_params) != 0:
                 scaler[i] = scaler[i].set_params(**set_params[i])
-            scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
+            scaler[i] = Dataset.__set_scale_attributes(
+                method, scaler[i], set_attributes[i]
+            )
             Y[:, i] = scaler[i].inverse_transform(Y[:, i].reshape(-1, 1)).flatten()
         return Y
 
-
-    def apply_scale_Y(self, method: Scale, set_params: List = [], set_attributes: List = []):
+    def apply_scale_Y(
+        self, method: Scale, set_params: List = [], set_attributes: List = []
+    ):
         """
-           Scale a 1D vector or 2D matrix of the output property(ies) with Scale method.
+        Scale a 1D vector or 2D matrix of the output property(ies) with Scale method.
 
-           Parameters
-           ----------
+        Parameters
+        ----------
 
-           method: `Scale`
-                   The method is used to scale Y
+        method: `Scale`
+                The method is used to scale Y
 
-           set_params: `List`
-                   A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-           set_attributes: `List`
-                   A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
 
-           Returns
-           -------
-           `Dataset`
-                A Dataset object.
-       """
+        Returns
+        -------
+        `Dataset`
+             A Dataset object.
+        """
         self.Y, self.get_scale_Y_props = Dataset.scale_Y(
             self.Y, method, set_params, set_attributes
         )
@@ -493,44 +602,54 @@ class Dataset:
         Y: np.ndarray, method: Scale, set_params: List = [], set_attributes: List = []
     ):
         """
-           Static scale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
+        Static scale method for a 1D vector or 2D matrix of the output property(ies) with Scale method.
 
-           Parameters
-           ----------
+        Parameters
+        ----------
 
-           Y: `numpy.ndarray`
-                   A scaled 1D vector or 2D matrix of the output property(ies).
+        Y: `numpy.ndarray`
+                A scaled 1D vector or 2D matrix of the output property(ies).
 
-           method: `Scale`
-                   The method is used to scale Y
+        method: `Scale`
+                The method is used to scale Y
 
-           set_params: `List`
-                   A list of dicts with the parameters of each Scale method.
+        set_params: `List`
+                A list of dicts with the parameters of each Scale method.
 
-           set_attributes: `List`
-                   A list of dicts with the attributes of each Scale method.
+        set_attributes: `List`
+                A list of dicts with the attributes of each Scale method.
 
 
-           Returns
-           -------
-           `Dataset`
-                A Dataset object.
-       """
+        Returns
+        -------
+        `Dataset`
+             A Dataset object.
+        """
         if method == Scale.STANDARD:
             scaler = [StandardScaler() for _ in range(Y.shape[1])]
         elif method == Scale.MINMAX:
             scaler = [MinMaxScaler() for _ in range(Y.shape[1])]
-        Y, get_params, get_attributes = Dataset.__scale_Y_parser(Y, method, scaler, set_params, set_attributes)
+        Y, get_params, get_attributes = Dataset.__scale_Y_parser(
+            Y, method, scaler, set_params, set_attributes
+        )
         return Y, {"params": get_params, "attributes": get_attributes}
 
-    def __scale_Y_parser(Y: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+    def __scale_Y_parser(
+        Y: np.ndarray,
+        method: Scale,
+        scaler: Any,
+        set_params: Dict,
+        set_attributes: Dict,
+    ):
         get_params = []
         get_attributes = []
         for i in range(Y.shape[1]):
             if len(set_params) != 0:
                 scaler[i] = scaler[i].set_params(**set_params[i])
             if len(set_attributes) != 0:
-                scaler[i] = Dataset.__set_scale_attributes(method, scaler[i], set_attributes[i])
+                scaler[i] = Dataset.__set_scale_attributes(
+                    method, scaler[i], set_attributes[i]
+                )
             else:
                 scaler[i] = scaler[i].fit(Y[:, i].reshape(-1, 1))
             Y[:, i] = scaler[i].transform(Y[:, i].reshape(-1, 1)).flatten()
@@ -573,7 +692,7 @@ class Dataset:
                 "scale_": scaler.scale_,
                 "mean_": scaler.mean_,
                 "var_": scaler.var_,
-                "n_samples_seen_": scaler.n_samples_seen_
+                "n_samples_seen_": scaler.n_samples_seen_,
             }
         elif method == Scale.MINMAX:
             return {
@@ -581,10 +700,16 @@ class Dataset:
                 "scale_": scaler.scale_,
                 "data_min_": scaler.data_min_,
                 "data_max_": scaler.data_max_,
-                "data_range_": scaler.data_range_
+                "data_range_": scaler.data_range_,
             }
 
-    def __scale_X(X: np.ndarray, method: Scale, scaler: Any, set_params: Dict, set_attributes: Dict):
+    def __scale_X(
+        X: np.ndarray,
+        method: Scale,
+        scaler: Any,
+        set_params: Dict,
+        set_attributes: Dict,
+    ):
         if len(set_params) != 0:
             scaler = scaler.set_params(**set_params)
         get_params = scaler.get_params()

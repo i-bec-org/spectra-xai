@@ -18,7 +18,7 @@ def sigest(x, frac=0.5, scale=True):
     index1 = np.random.choice(list(range(m)), size=n, replace=True)
     index2 = np.random.choice(list(range(m)), size=n, replace=True)
     temp = x[index1, :] - x[index2, :]
-    dist = np.sum(temp ** 2, axis=1)
+    dist = np.sum(temp**2, axis=1)
     srange = 1 / np.quantile(dist[np.nonzero(dist)], q=[0.9, 0.5, 0.1])
     return srange
 

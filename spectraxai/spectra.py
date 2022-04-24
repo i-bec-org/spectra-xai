@@ -2,9 +2,10 @@ import ast
 import numpy as np
 from enum import Enum
 from scipy.signal import savgol_filter
-from typing import Union, Tuple, Dict, List, Any
+from typing import Union, Tuple, Dict, List
 
 from spectraxai.utils.continuumRemoval import continuum_removal
+
 
 class SpectralPreprocessing(str, Enum):
     """
@@ -85,7 +86,7 @@ class Spectra:
     """
 
     def __init__(self, X: np.ndarray) -> None:
-        """ X is a np 2D array containing the (sample, wavelengths) matrix """
+        """X is a np 2D array containing the (sample, wavelengths) matrix"""
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         if X.ndim != 2:
@@ -94,7 +95,7 @@ class Spectra:
 
     def reflectance(self) -> np.ndarray:
         """Transform absorbance to reflectance"""
-        return Spectra(-1 * self.X ** 10)
+        return Spectra(-1 * self.X**10)
 
     def absorbance(self) -> np.ndarray:
         """Transform reflectance to absorbance"""

@@ -14,12 +14,12 @@ from sklearn.preprocessing import StandardScaler
 
 from spectraxai.utils.modelAssessment import metrics
 from spectraxai.utils.svrParams import sigest
-from spectraxai.spectra import SpectralPreprocessingSequence
+from spectraxai.spectra import SpectralPreprocessing, SpectralPreprocessingSequence
 from spectraxai.dataset import Dataset
 
 
 class Model(str, Enum):
-    """A model class to describe commonly used ML models for spectral processing """
+    """A model class to describe commonly used ML models for spectral processing"""
 
     PLS = "Partial Least Squares"
     SVR = "Support Vector Regression"
@@ -45,13 +45,13 @@ class StandardModel:
         """
         Parameters
         ----------
-        
+
         model: `Model`
-                Select a model from `Model` class.
-        
+            Select a model from `Model` class.
+
         best_hyperparameters: `dict`
-            A dictionary of pre-selected hyperparameters (e.g. a best model) 
-        
+            A dictionary of pre-selected hyperparameters (e.g. a best model)
+
         grid_search_hyperparameters: `dict`
             Specify custom grid search range for the hyperparameters
         """
@@ -79,7 +79,7 @@ class StandardModel:
             elif model == Model.CUBIST:
                 self.grid_search_hyperparameters = {
                     "n_committees": [1, 5, 10, 20],
-                    "neighbors": [0, 1, 5, 9]
+                    "neighbors": [0, 1, 5, 9],
                 }
 
     def __vip(self, model):
@@ -99,34 +99,58 @@ class StandardModel:
 
     def train(
         self,
-        X: np.ndarray,
-        Y: np.ndarray,
-        preprocess: SpectralPreprocessingSequence = None,
+        dataset: Dataset,
+        preprocess: SpectralPreprocessingSequence = SpectralPreprocessing.NONE,
         idx_trn: np.array = np.array([]),
         idx_tst: np.array = np.array([]),
-        get_model: bool = False
-    ):
-        """Train the model giving the X, Y, preprocess sequense, idx_trn or idx_tst. Returns dict of the trained model"""
-        if preprocess == None:
-            raise AssertionError("You need to specify Spectral Preprocessing Sequence")
+        get_model: bool = False,
+    ) -> List[Dict]:
+        """Trains a model given X (features), Y (output) and a spectral pre-processing sequence.
+
+        Pass here the whole dataset of (X, Y) and either specify idx_trn (training indices) or idx_tst (testing indices).
+
+        Parameters
+        ----------
+
+        dataset: `spectraxai.dataset.Dataset`
+            the Dataset to train the model
+
+        preprocess: `spectraxai.spectra.SpectralPreprocessingSequence`
+            Optional pre-processing sequence. Defaults to SpectralPreprocessing.NONE.
+
+        idx_trn: `np.array`
+            The indices of the trn samples. Defaults to np.array([]).
+
+        idx_tst: `np.array`
+            The indices of the tst samples. Defaults to np.array([]).
+
+        get_model: `bool`
+            If true, also return the generated model. Defaults to False.
+
+        Returns
+        -------
+        `List[Dict]`
+            A dictionary containing the accuracy results and assorted metadata for each output property
+        """
+
+        if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
+            raise AssertionError(
+                "Cannot create a multi-output SVR model. Please train a model for each output property."
+            )
         if idx_tst.size == 0 and idx_trn.size == 0:
-            raise AssertionError("You need to specify either tst or trn indices or both")
+            raise AssertionError(
+                "You need to specify either tst or trn indices or both"
+            )
         if idx_tst.size > 0 and idx_trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
-        if idx_trn.size > 0 and idx_tst.size == 0:
-            X_train, X_test, y_train, y_test, _, _ = (
-                Dataset(X, Y)
-                .preprocess(preprocess)
-                .train_test_split_explicit(trn=idx_trn)
-            )
+        elif idx_trn.size > 0 and idx_tst.size == 0:
+            X_train, X_test, y_train, y_test, _, _ = dataset.preprocess(
+                preprocess
+            ).train_test_split_explicit(trn=idx_trn)
         elif idx_trn.size == 0 and idx_tst.size > 0:
-            X_train, X_test, y_train, y_test, _, _ = (
-                Dataset(X, Y)
-                .preprocess(preprocess)
-                .train_test_split_explicit(tst=idx_tst)
-            )
-        else:
-            X_train, X_test, y_train, y_test = X[idx_trn], X[idx_tst], Y[idx_trn], Y[idx_tst]
+            X_train, X_test, y_train, y_test, _, _ = dataset.preprocess(
+                preprocess
+            ).train_test_split_explicit(tst=idx_tst)
 
         # Scale the data for SVR
         if self.model == Model.SVR:
@@ -137,7 +161,7 @@ class StandardModel:
         #     ymean, ystd = np.mean(y_train), np.std(y_train)
         #     y_train = (y_train - ymean) / ystd
 
-        # Find optimal SVR RBF parameters through grid search and PLS n_components
+        # If hyperparameters are passed, use them; otherwise run grid search
         if len(self.best_hyperparameters) != 0:
             if self.model == Model.SVR:
                 model = SVR(kernel="rbf", max_iter=5e8)
@@ -152,18 +176,18 @@ class StandardModel:
                 model = Cubist()
                 model = model.set_params(**self.best_hyperparameters)
             trn_t0 = time.time()
-            model.fit(X_train, y_train)
+            model.fit(X_train, np.squeeze(y_train))
             trn_t1 = time.time()
         else:
             if self.model == Model.SVR:
-                if not "gamma" in self.grid_search_hyperparameters:
+                if "gamma" not in self.grid_search_hyperparameters:
                     gamma = sigest(X_train)
                     self.grid_search_hyperparameters["gamma"] = np.linspace(
                         gamma[0], gamma[2], num=5
                     )
                 model = SVR(kernel="rbf", max_iter=5e8)
             elif self.model == Model.PLS:
-                if not "n_components" in self.grid_search_hyperparameters:
+                if "n_components" not in self.grid_search_hyperparameters:
                     self.grid_search_hyperparameters["n_components"] = np.arange(
                         1, min(100, X_train.shape[1]), 1
                     )
@@ -180,7 +204,7 @@ class StandardModel:
                 n_jobs=-1,
                 verbose=0,
             )
-            grid_search.fit(X_train, y_train)
+            grid_search.fit(X_train, np.squeeze(y_train))
             trn_t1 = time.time()
             # grid_search.best_params_ has the best Parameters
             model = grid_search.best_estimator_
@@ -191,40 +215,66 @@ class StandardModel:
         tst_t1 = time.time()
         # if self.model == Model.SVR:
         #     y_hat = y_hat * ystd + ymean
-        res = metrics(y_test, y_hat)
 
-        # Gather all results
-        res["pre-process"] = str(preprocess)
-        if self.model == Model.SVR:
-            for key in ["C", "epsilon", "gamma"]:
-                res[key] = model.get_params()[key]
-            res["SVs"] = len(model.support_)
-        elif self.model == Model.PLS:
-            res["n_components"] = model.get_params()["n_components"]
-            res["VIP"] = self.__vip(model)
-        elif self.model == Model.RF:
-            for key in ["max_features", "n_estimators"]:
-                res[key] = model.get_params()[key]
-            res["feature_importance"] = model.feature_importances_
-        elif self.model == Model.CUBIST:
-            for key in ["n_committees", "neighbors"]:
-                res[key] = model.get_params()[key]
-            res["feature_importance"] = model.feature_importances_
-        res["TrainingTime"] = trn_t1 - trn_t0
-        res["TestingTime"] = tst_t1 - tst_t0
-        if get_model:
-            res["model"] = model
-        return res
+        results = []
+        for i in range(y_train.shape[1]):
+            res = metrics(y_test[:, i], y_hat[:, i] if y_hat.ndim == 2 else y_hat)
+            res["Output"] = i
+
+            # Gather all results
+            res["pre-process"] = str(preprocess)
+            if self.model == Model.SVR:
+                for key in ["C", "epsilon", "gamma"]:
+                    res[key] = model.get_params()[key]
+                res["SVs"] = len(model.support_)
+            elif self.model == Model.PLS:
+                res["n_components"] = model.get_params()["n_components"]
+                res["VIP"] = self.__vip(model)
+            elif self.model == Model.RF:
+                for key in ["max_features", "n_estimators"]:
+                    res[key] = model.get_params()[key]
+                res["feature_importance"] = model.feature_importances_
+            elif self.model == Model.CUBIST:
+                for key in ["n_committees", "neighbors"]:
+                    res[key] = model.get_params()[key]
+                res["feature_importance"] = model.feature_importances_
+            res["TrainingTime"] = trn_t1 - trn_t0
+            res["TestingTime"] = tst_t1 - tst_t0
+            if get_model:
+                res["model"] = model
+            results.append(res)
+        return results
 
     def train_with_sequence(
         self,
-        X: np.ndarray,
-        Y: np.ndarray,
+        dataset: Dataset,
         preprocesses: List[SpectralPreprocessingSequence] = [],
         idx_trn: np.array = np.array([]),
         idx_tst: np.array = np.array([]),
-    ):
-        """Train the model giving the X, Y, list of preprocesses sequense, idx_trn or idx_tst. Returns a dataframe of the trained models"""
+    ) -> pandas.DataFrame:
+        """Train a model using different SpectralPreprocessingSequences
+
+        A short-hand version to quickly test different pre-treatments, calling the train function
+
+        Parameters
+        ----------
+        dataset: `spectraxai.dataset.Dataset`
+            the Dataset to train the model
+
+        preprocesses: `spectraxai.spectra.List[SpectralPreprocessingSequence]`
+            List of pre-processing sequences to test. Defaults to [].
+
+        idx_trn: `np.array`
+            The indices of the trn samples. Defaults to np.array([]).
+
+        idx_tst: `np.array`
+            The indices of the tst samples. Defaults to np.array([]).
+
+        Returns
+        -------
+        `pandas.DataFrame`
+            Returns a dataframe with the results of the trained models. By default, no model is returned to keep a low memory footprint.
+        """
         if len(preprocesses) == 0:
             raise AssertionError(
                 "You need to specify a list of Spectral Preprocessing Sequence"
@@ -253,11 +303,10 @@ class StandardModel:
                 columns=common + ["max_features", "n_estimators", "feature_importance"]
             )
         elif self.model == Model.CUBIST:
-             dataFrame = pandas.DataFrame(
+            dataFrame = pandas.DataFrame(
                 columns=common + ["n_committees", "neighbors", "feature_importance"]
-            )           
-        for preprocess in preprocesses:
-            dataFrame.loc[len(dataFrame)] = self.train(
-                X, Y, preprocess, idx_trn, idx_tst
             )
+        for preprocess in preprocesses:
+            for result in self.train(dataset, preprocess, idx_trn, idx_tst):
+                dataFrame.loc[len(dataFrame)] = result
         return dataFrame
