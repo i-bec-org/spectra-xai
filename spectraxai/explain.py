@@ -53,6 +53,7 @@ def circular_bar_plot_importance(importance: List, x_labels: List = []) -> plt.A
     # In our example, 0 in the dataset will be converted to the lowerLimit (10)
     # The maximum will be converted to the upperLimit (100)
     slope = (upperLimit - lowerLimit) / max
+    heights = slope * df.Value + lowerLimit
 
     # Compute the width of each bar. In total we have 2*Pi = 360°
     width = 2 * np.pi / len(df.index)
