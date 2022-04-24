@@ -18,20 +18,6 @@ setup(
     version="0.2.1",
     packages=find_packages(include=["spectraxai", "spectraxai.utils"]),
     python_requires=">=3.6",
-    install_requires=[
-        "pandas",
-        "numpy",
-        "scipy",
-        "sklearn",
-        "matplotlib",
-        "cubist"
-    ],
-    extras_require={
-        "dev": [
-            "flake8",
-            "pytest",
-            "pytest-cov",
-            "black"
-        ]
-    }
+    install_requires=["pandas", "numpy", "scipy", "sklearn", "matplotlib", "cubist"],
+    extras_require={"dev": ["flake8", "pytest", "pytest-cov", "black", "ipykernel"]},
 )

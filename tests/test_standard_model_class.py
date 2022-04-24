@@ -5,6 +5,7 @@ import numpy as np
 from .context import spectraxai, DATA_FOLDER
 from spectraxai.models import Model, StandardModel
 from spectraxai.spectra import SpectralPreprocessing
+from spectraxai.dataset import Dataset
 
 
 class TestStandardModelClass(unittest.TestCase):
@@ -67,10 +68,12 @@ class TestStandardModelClass(unittest.TestCase):
             ],
         ]
         df = pandas.read_csv(os.path.join(DATA_FOLDER, "SSL_GR.csv"))
-        self.X, self.Y = df.loc[:, "350":"2500":20], df.OM
-        self.idx_trn, self.idx_tst = np.arange(200), np.arange(200, self.X.shape[0])
+        X = df.loc[:, "350":"2500":20]
+        self.dataset1D = Dataset(X, df.OM)
+        self.dataset2D = Dataset(X, df.loc[:, ["OM", "Sand_Fraction"]])
+        self.idx_trn, self.idx_tst = np.arange(200), np.arange(200, X.shape[0])
 
-    def test_wrong_params(self):
+    def test_wrong_params_model_constructor(self):
         self.assertRaises(
             AssertionError,
             StandardModel,
@@ -103,76 +106,82 @@ class TestStandardModelClass(unittest.TestCase):
             {"neighbors": 1, "n_committees": 5},
             {"neighbors": [1, 5], "n_committees": [1, 5, 10]},
         )
+
+    def test_wrong_params_model_train(self):
         for model in self.models:
-            self.assertRaises(AssertionError, model.train, self.X, self.Y)
+            # Neither idx_trn nor idx_tst
+            self.assertRaises(AssertionError, model.train, self.dataset1D)
             self.assertRaises(
-                AssertionError, model.train, self.X, self.Y, SpectralPreprocessing.NONE
+                AssertionError, model.train, self.dataset1D, SpectralPreprocessing.NONE
             )
-            self.assertRaises(
-                AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn
-            )
-            self.assertRaises(
-                AssertionError, model.train, self.X, self.Y, idx_tst=self.idx_tst
-            )
+            # Both idx_trn and idx_tst
             self.assertRaises(
                 AssertionError,
                 model.train,
-                self.X,
-                self.Y,
+                self.dataset1D,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
-            # model.train(self.X, self.Y, SpectralPreprocessing.NONE, idx_trn=self.idx_trn)
-            # model.train(self.X, self.Y, SpectralPreprocessing.NONE, idx_tst=self.idx_tst)
             self.assertRaises(
                 AssertionError,
                 model.train,
-                self.X,
-                self.Y,
+                self.dataset1D,
                 SpectralPreprocessing.NONE,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
-
-            self.assertRaises(AssertionError, model.train_with_sequence, self.X, self.Y)
-            self.assertRaises(
-                AssertionError, model.train_with_sequence, self.X, self.Y, self.methods
-            )
+            # No list of sequences given
+            self.assertRaises(AssertionError, model.train_with_sequence, self.dataset1D)
             self.assertRaises(
                 AssertionError,
                 model.train_with_sequence,
-                self.X,
-                self.Y,
+                self.dataset1D,
                 idx_trn=self.idx_trn,
             )
             self.assertRaises(
                 AssertionError,
                 model.train_with_sequence,
-                self.X,
-                self.Y,
+                self.dataset1D,
                 idx_tst=self.idx_tst,
             )
+            # Neither idx_trn nor idx_tst passed
             self.assertRaises(
-                AssertionError,
-                model.train,
-                self.X,
-                self.Y,
-                idx_trn=self.idx_trn,
-                idx_tst=self.idx_tst,
+                AssertionError, model.train_with_sequence, self.dataset1D, self.methods
             )
-            model.train_with_sequence(
-                self.X, self.Y, self.methods, idx_trn=self.idx_trn
-            )
-            # model.train_with_sequence(self.X, self.Y, self.methods, idx_tst=self.idx_tst)
+            # Both idx_trn and idx_tst passed
             self.assertRaises(
                 AssertionError,
                 model.train_with_sequence,
-                self.X,
-                self.Y,
+                self.dataset1D,
                 self.methods,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
+            # This should work
+            model.train_with_sequence(
+                self.dataset1D, self.methods, idx_trn=self.idx_trn
+            )
+
+    def test_multi_output(self):
+        for model in self.models:
+            if model.model in [Model.SVR, Model.CUBIST]:
+                self.assertRaises(
+                    AssertionError,
+                    model.train,
+                    self.dataset2D,
+                    idx_trn=self.idx_trn,
+                )
+                self.assertRaises(
+                    AssertionError,
+                    model.train_with_sequence,
+                    self.dataset2D,
+                    self.methods,
+                    idx_trn=self.idx_trn,
+                )
+            else:
+                self.assertEqual(
+                    len(model.train(self.dataset2D, idx_trn=self.idx_trn)), 2
+                )
 
 
 if __name__ == "__main__":

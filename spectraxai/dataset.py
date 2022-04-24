@@ -80,6 +80,9 @@ class Dataset:
         if isinstance(Y, pandas.DataFrame) or isinstance(Y, pandas.Series):
             Y = Y.to_numpy()
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
+        self.n_samples = self.X.shape[0]
+        self.n_features = self.X.shape[1]
+        self.n_outputs = self.Y.shape[1]
 
     def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
         """
@@ -178,8 +181,7 @@ class Dataset:
         `Dataset`
             A Dataset object.
         """
-        self.X = self.__preprocess(self.X, method)
-        return self
+        return Dataset(self.__preprocess(self.X, method), self.Y)
 
     def preprocess_3D(self, methods: List[SpectralPreprocessingSequence]):
         """
@@ -205,6 +207,20 @@ class Dataset:
             thisX = np.copy(self.X)
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
+
+    def corr(self) -> List:
+        """Calculate Pearson's correlation between all input features and the output
+
+        Returns:
+            List: A 2-D list containing the correlation for each output property
+        """
+        return [
+            [
+                np.corrcoef(self.X[:, i], self.Y[:, j])[0][1]
+                for i in range(self.X.shape[1])
+            ]
+            for j in range(self.Y.shape[1])
+        ]
 
     def apply_unscale_X(
         self,
