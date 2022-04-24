@@ -19,7 +19,7 @@ from spectraxai.dataset import Dataset
 
 
 class Model(str, Enum):
-    """A model class to describe commonly used ML models for spectral processing """
+    """A model class to describe commonly used ML models for spectral processing"""
 
     PLS = "Partial Least Squares"
     SVR = "Support Vector Regression"
@@ -79,7 +79,7 @@ class StandardModel:
             elif model == Model.CUBIST:
                 self.grid_search_hyperparameters = {
                     "n_committees": [1, 5, 10, 20],
-                    "neighbors": [0, 1, 5, 9]
+                    "neighbors": [0, 1, 5, 9],
                 }
 
     def __vip(self, model):
@@ -104,7 +104,7 @@ class StandardModel:
         preprocess: SpectralPreprocessingSequence = None,
         idx_trn: np.array = np.array([]),
         idx_tst: np.array = np.array([]),
-        get_model: bool = False
+        get_model: bool = False,
     ):
         """
         Train the model giving the X, Y, preprocess sequence, idx_trn or idx_tst.
@@ -114,7 +114,9 @@ class StandardModel:
         if preprocess is None:
             raise AssertionError("You need to specify Spectral Preprocessing Sequence")
         if idx_tst.size == 0 and idx_trn.size == 0:
-            raise AssertionError("You need to specify either tst or trn indices or both")
+            raise AssertionError(
+                "You need to specify either tst or trn indices or both"
+            )
         if idx_tst.size > 0 and idx_trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
         if idx_trn.size > 0 and idx_tst.size == 0:
@@ -130,7 +132,12 @@ class StandardModel:
                 .train_test_split_explicit(tst=idx_tst)
             )
         else:
-            X_train, X_test, y_train, y_test = X[idx_trn], X[idx_tst], Y[idx_trn], Y[idx_tst]
+            X_train, X_test, y_train, y_test = (
+                X[idx_trn],
+                X[idx_tst],
+                Y[idx_trn],
+                Y[idx_tst],
+            )
 
         # Scale the data for SVR
         if self.model == Model.SVR:

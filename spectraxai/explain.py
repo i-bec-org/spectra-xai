@@ -11,6 +11,16 @@ from spectraxai.dataset import Dataset
 def bar_plot_importance(
     importance: List, x_labels: List = [], ax: plt.Axes = None
 ) -> plt.Axes:
+    """Plots a bar plot of the feature importance
+
+    Args:
+        importance (List): A list containing the importance of each feature
+        x_labels (List, optional): The feature labels, i.e. the wavelengths. Defaults to [].
+        ax (plt.Axes, optional): An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+
+    Returns:
+        plt.Axes: _description_
+    """
     if ax is None:
         plt.figure()
         ax = plt.gca()
@@ -27,6 +37,16 @@ def bar_plot_importance(
 
 
 def circular_bar_plot_importance(importance: List, x_labels: List = []) -> plt.Axes:
+    """Plots a circular (spiral) bar plot of the feature importance
+
+    Args:
+        importance (List): A list containing the importance of each feature
+        x_labels (List, optional): The feature labels, i.e. the wavelengths. Defaults to [].
+        ax (plt.Axes, optional): An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+
+    Returns:
+        plt.Axes: _description_
+    """
     if not x_labels:
         x_labels = ["X{0}".format(i) for i in range(len(importance))]
 

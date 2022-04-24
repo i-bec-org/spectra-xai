@@ -12,7 +12,9 @@ def continuum_removal(spectrum: np.ndarray, wvs: list = []):
         return np.array([continuum_removal(s) for s in spectrum])
     else:
         spectrum = 1 / spectrum  # needed for absorbance
-        mat = np.column_stack(([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0]))
+        mat = np.column_stack(
+            ([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0])
+        )
         hull = ConvexHull(mat)
         ids = np.array(sorted(hull.vertices)[1:-1]) - 1
         cont = np.interp(wvs, np.array(wvs)[ids], spectrum[ids])

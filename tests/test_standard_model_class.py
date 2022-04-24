@@ -25,7 +25,11 @@ class TestStandardModelClass(unittest.TestCase):
             ),
             StandardModel(
                 Model.CUBIST,
-                best_hyperparameters={"n_committees": 5, "neighbors": 1, "composite": True}
+                best_hyperparameters={
+                    "n_committees": 5,
+                    "neighbors": 1,
+                    "composite": True,
+                },
             ),
             StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [2, 10, 20]}
@@ -50,9 +54,9 @@ class TestStandardModelClass(unittest.TestCase):
                 grid_search_hyperparameters={
                     "neighbors": [1, 5],
                     "n_committees": [1, 5, 10],
-                    "composite": [True]
-                }
-            )
+                    "composite": [True],
+                },
+            ),
         ]
         self.methods = [
             SpectralPreprocessing.ABS,
@@ -104,10 +108,19 @@ class TestStandardModelClass(unittest.TestCase):
             self.assertRaises(
                 AssertionError, model.train, self.X, self.Y, SpectralPreprocessing.NONE
             )
-            self.assertRaises(AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn)
-            self.assertRaises(AssertionError, model.train, self.X, self.Y, idx_tst=self.idx_tst)
             self.assertRaises(
-                AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn, idx_tst=self.idx_tst
+                AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn
+            )
+            self.assertRaises(
+                AssertionError, model.train, self.X, self.Y, idx_tst=self.idx_tst
+            )
+            self.assertRaises(
+                AssertionError,
+                model.train,
+                self.X,
+                self.Y,
+                idx_trn=self.idx_trn,
+                idx_tst=self.idx_tst,
             )
             # model.train(self.X, self.Y, SpectralPreprocessing.NONE, idx_trn=self.idx_trn)
             # model.train(self.X, self.Y, SpectralPreprocessing.NONE, idx_tst=self.idx_tst)
@@ -126,15 +139,30 @@ class TestStandardModelClass(unittest.TestCase):
                 AssertionError, model.train_with_sequence, self.X, self.Y, self.methods
             )
             self.assertRaises(
-                AssertionError, model.train_with_sequence, self.X, self.Y, idx_trn=self.idx_trn
+                AssertionError,
+                model.train_with_sequence,
+                self.X,
+                self.Y,
+                idx_trn=self.idx_trn,
             )
             self.assertRaises(
-                AssertionError, model.train_with_sequence, self.X, self.Y, idx_tst=self.idx_tst
+                AssertionError,
+                model.train_with_sequence,
+                self.X,
+                self.Y,
+                idx_tst=self.idx_tst,
             )
             self.assertRaises(
-                AssertionError, model.train, self.X, self.Y, idx_trn=self.idx_trn, idx_tst=self.idx_tst
+                AssertionError,
+                model.train,
+                self.X,
+                self.Y,
+                idx_trn=self.idx_trn,
+                idx_tst=self.idx_tst,
             )
-            model.train_with_sequence(self.X, self.Y, self.methods, idx_trn=self.idx_trn)
+            model.train_with_sequence(
+                self.X, self.Y, self.methods, idx_trn=self.idx_trn
+            )
             # model.train_with_sequence(self.X, self.Y, self.methods, idx_tst=self.idx_tst)
             self.assertRaises(
                 AssertionError,
