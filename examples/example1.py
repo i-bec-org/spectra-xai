@@ -37,10 +37,11 @@ methods = [
     [SpectralPreprocessing.NONE, SpectralPreprocessing.SNV],
 ]
 
-for i in range(len(idx_trn)):
-    print("PLS - {0}/{1}".format(i + 1, len(idx_trn)))
-    for j in range(len(methods)):
-        pls = StandardModel(Model.PLS)
-        # or, e.g. svr = StandardModel(Model.SVR)
-        res = pls.train(dataset, methods[j], idx_trn[i])
-        print("{0} - {1}".format(j + 1, res))
+for method in methods:
+    for i, fold in enumerate(idx_trn):
+        res = StandardModel(Model.PLS).train(dataset, method, fold)
+        print(
+            "{0}, fold {1}: RMSE {2:.2f}".format(
+                res[0]["pre-process"], i + 1, res[0]["RMSE"]
+            )
+        )
