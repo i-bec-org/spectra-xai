@@ -18,7 +18,15 @@ setup(
     version="0.3.0",
     packages=find_packages(include=["spectraxai", "spectraxai.utils"]),
     python_requires=">=3.6",
-    install_requires=["pandas", "numpy", "scipy", "sklearn", "matplotlib", "cubist"],
+    install_requires=[
+        "pandas",
+        "numpy",
+        "scipy",
+        "sklearn",
+        "matplotlib",
+        "cubist",
+        "seaborn",
+    ],
     extras_require={
         "dev": [
             "flake8",
