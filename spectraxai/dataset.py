@@ -159,7 +159,7 @@ class Dataset:
         elif split == DatasetSplit.STRATIFIED:
             skf = StratifiedKFold(n_splits=opt)
             X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst = [], [], [], [], [], []
-            for trn_index, tst_index in skf.split(self.X):
+            for trn_index, tst_index in skf.split(self.X, self.Y):
                 X_trn.append(self.X[trn_index, :])
                 X_tst.append(self.X[tst_index, :])
                 Y_trn.append(self.Y[trn_index, :])
