@@ -120,8 +120,8 @@ class Dataset:
                 The method used to split the dataset
 
         opt: `Number`
-                A float number (between 0 and 1) indicating the percentage of the training dataset for Random and Kennard Stone split.
-                A natural number for Cross Validation split.
+                A float number (between 0 and 1) indicating the percentage of the training dataset for Random and Kennard–Stone split.
+                A natural number for Cross Validation and Stratified split.
 
         Returns
         -------
@@ -129,14 +129,18 @@ class Dataset:
             The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
         """
         indices = np.arange(self.X.shape[0])
-        if split != DatasetSplit.STRATIFIED:
-            if split != DatasetSplit.CROSS_VALIDATION:
-                if opt <= 0 or opt >= 1:
-                    raise AssertionError("opt param should be in the (0, 1) range")
-            elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
-                raise AssertionError("opt param should be positive")
-        elif split == DatasetSplit.CROSS_VALIDATION and opt <= 1:
-            raise AssertionError("opt param should be positive")
+        if split == DatasetSplit.RANDOM or split == DatasetSplit.KENNARD_STONE:
+            msg = "opt param should be a float in the (0, 1) range for RANDOM and KENNARD_STONE splits"
+            if not isinstance(opt, float):
+                raise TypeError(msg)
+            if opt <= 0 or opt >= 1:
+                raise ValueError(msg)
+        elif split == DatasetSplit.CROSS_VALIDATION or split == DatasetSplit.STRATIFIED:
+            msg = "opt param should be a positive int greater than 1 for CROSS_VALIDATION and STRATIFIED splits"
+            if not isinstance(opt, int):
+                raise TypeError(msg)
+            if opt <= 1:
+                raise ValueError(msg)
         if split == DatasetSplit.RANDOM:
             return train_test_split(self.X, self.Y, indices, train_size=opt)
         elif split == DatasetSplit.KENNARD_STONE:
@@ -206,7 +210,9 @@ class Dataset:
         `Dataset`
             A Dataset object.
         """
-        return Dataset(self.__preprocess(self.X, method), self.Y, self.X_names, self.Y_names)
+        return Dataset(
+            self.__preprocess(self.X, method), self.Y, self.X_names, self.Y_names
+        )
 
     def preprocess_3D(self, methods: List[SpectralPreprocessingSequence]):
         """
@@ -240,7 +246,7 @@ class Dataset:
         Return
         ------
         `np.ndarray`
-            A 2-D np.array containing the correlation for each output property
+            A 2-D np.array containing the correlation for each output property of size (n_outputs, n_features)
         """
         return np.array(
             [
@@ -259,7 +265,7 @@ class Dataset:
         Return
         ------
         `np.ndarray`
-            A 2-D np.array containing the mutual information for each output property
+            A 2-D np.array containing the mutual information for each output property of size (n_outputs, n_features)
         """
         normalize = lambda a: a / np.max(a)
         return np.array(

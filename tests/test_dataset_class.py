@@ -1,3 +1,4 @@
+from ast import Assert
 import unittest
 from .context import spectraxai
 from spectraxai.dataset import Dataset, DatasetSplit, Scale
@@ -18,8 +19,10 @@ class TestDatasetClass(unittest.TestCase):
         )
         y = np.array(list(range(self.nsamples)))
         Y = np.arange(self.nsamples * 2).reshape((self.nsamples, 2))
+        yclass = np.random.randint(2, size=self.nsamples)
         self.datasetY1dim = Dataset(X, y)
         self.datasetY2dim = Dataset(X, Y)
+        self.datasetYclass = Dataset(X, yclass)
         self.split_size = 0.6
 
     def test_constructor(self):
@@ -32,6 +35,22 @@ class TestDatasetClass(unittest.TestCase):
             Dataset,
             np.array(list(range(self.nsamples))),
             self.datasetY1dim.Y,
+        )
+        # X_names has wrong size
+        self.assertRaises(
+            AssertionError,
+            Dataset,
+            self.datasetY1dim.X,
+            self.datasetY1dim.Y,
+            ["feature1"],
+        )
+        # Y_names has wrong size
+        self.assertRaises(
+            AssertionError,
+            Dataset,
+            self.datasetY2dim.X,
+            self.datasetY2dim.Y,
+            Y_names=["output1"],
         )
 
     def _assert_X_size(self, X_trn, X_tst):
@@ -51,16 +70,39 @@ class TestDatasetClass(unittest.TestCase):
         self.assertFalse(bool(set(idx_trn).intersection(idx_tst)))
 
     def test_wrong_params(self):
-        # test size not in (0, 1)
-        self.assertRaises(
-            AssertionError, self.datasetY1dim.train_test_split, DatasetSplit.RANDOM, 2.5
-        )
-        self.assertRaises(
-            AssertionError,
-            self.datasetY1dim.train_test_split,
-            DatasetSplit.RANDOM,
-            -2.5,
-        )
+        # Wrong opt param
+        splits_a = [DatasetSplit.RANDOM, DatasetSplit.KENNARD_STONE]
+        for method in splits_a:
+            self.assertRaises(
+                TypeError,
+                self.datasetY1dim.train_test_split,
+                method,
+                "str",
+            )
+            self.assertRaises(
+                TypeError, self.datasetY1dim.train_test_split, method, -2
+            )
+            self.assertRaises(
+                ValueError, self.datasetY1dim.train_test_split, method, -2.0
+            )
+            self.assertRaises(
+                ValueError, self.datasetY1dim.train_test_split, method, 10.0
+            )
+
+        splits_b = [DatasetSplit.CROSS_VALIDATION, DatasetSplit.STRATIFIED]
+        for method in splits_b:
+            self.assertRaises(
+                TypeError,
+                self.datasetY1dim.train_test_split,
+                method,
+                "str",
+            )
+            self.assertRaises(
+                TypeError, self.datasetY1dim.train_test_split, method, 0.2
+            )
+            self.assertRaises(
+                ValueError, self.datasetY1dim.train_test_split, method, -5
+            )
         # Pass both trn and tst to explicit split
         self.assertRaises(
             AssertionError,
@@ -107,6 +149,90 @@ class TestDatasetClass(unittest.TestCase):
             self._assert_X_size(X_trn, X_tst)
             self._assert_Y_size(y_trn, y_tst)
             self._assert_indices(idx_trn, idx_tst)
+        tst = np.random.choice(
+            np.arange(self.nsamples),
+            int(self.nsamples * (1 - self.split_size)),
+            replace=False,
+        )
+        for dataset in [self.datasetY1dim, self.datasetY2dim]:
+            (
+                X_trn,
+                X_tst,
+                y_trn,
+                y_tst,
+                idx_trn,
+                idx_tst,
+            ) = dataset.train_test_split_explicit(tst=tst)
+            self._assert_X_size(X_trn, X_tst)
+            self._assert_Y_size(y_trn, y_tst)
+            self._assert_indices(idx_trn, idx_tst)
+
+    def _assertions_for_folded_splits(
+        self, X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst, N_FOLDS
+    ):
+        self.assertTrue(X_trn.shape[1] == X_tst.shape[1] == self.nfeatures)
+        self.assertTrue(y_tst.ndim == y_trn.ndim == 2)
+        self.assertAlmostEqual(
+            X_trn.shape[0],
+            (N_FOLDS - 1) / N_FOLDS * self.nsamples,
+            delta=0.02 * self.nsamples,
+        )
+        self.assertAlmostEqual(
+            X_tst.shape[0], 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
+        )
+        self.assertAlmostEqual(
+            y_trn.shape[0],
+            (N_FOLDS - 1) / N_FOLDS * self.nsamples,
+            delta=0.02 * self.nsamples,
+        )
+        self.assertAlmostEqual(
+            y_tst.shape[0], 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
+        )
+        self.assertTrue(idx_trn.ndim == idx_tst.ndim == 1)
+        self.assertFalse(bool(set(idx_trn).intersection(idx_tst)))
+
+    def test_folded_splits(self):
+        N_FOLDS = 5
+        # Cross-validation
+        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
+            X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst = dataset.train_test_split(
+                DatasetSplit.CROSS_VALIDATION, N_FOLDS
+            )
+            for i in range(N_FOLDS):
+                self._assertions_for_folded_splits(
+                    X_trn[i],
+                    X_tst[i],
+                    y_trn[i],
+                    y_tst[i],
+                    idx_trn[i],
+                    idx_tst[i],
+                    N_FOLDS,
+                )
+        # Stratified
+        (
+            X_trn,
+            X_tst,
+            y_trn,
+            y_tst,
+            idx_trn,
+            idx_tst,
+        ) = self.datasetYclass.train_test_split(DatasetSplit.STRATIFIED, N_FOLDS)
+        for i in range(N_FOLDS):
+            self._assertions_for_folded_splits(
+                X_trn[i], X_tst[i], y_trn[i], y_tst[i], idx_trn[i], idx_tst[i], N_FOLDS
+            )
+
+    def test_calculate_corr(self):
+        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
+            corr = dataset.corr()
+            self.assertTrue(corr.shape[0] == dataset.Y.shape[1])
+            self.assertTrue(corr.shape[1] == self.nfeatures)
+
+    def test_calculate_mi(self):
+        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
+            mi = dataset.mi()
+            self.assertTrue(mi.shape[0] == dataset.Y.shape[1])
+            self.assertTrue(mi.shape[1] == self.nfeatures)
 
     def test_get_matrix_3D(self):
         methods = [
