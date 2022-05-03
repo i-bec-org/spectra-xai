@@ -7,6 +7,8 @@ This repository contains python code to enable XAI analysis on spectral datasets
   - [Installation](#installation)
   - [Running tests](#running-tests)
 
+[![Build Status](https://dev.azure.com/i-bec/spectra-xai/_apis/build/status/i-bec-org.spectra-xai?branchName=main)](https://dev.azure.com/i-bec/spectra-xai/_build/latest?definitionId=1&branchName=main)
+
 ## Documentation
 
 The documentation is accessible on [static.i-bec.org/spectraxai](https://static.i-bec.org/spectraxai/) which is currently accessible only for the 155.207.180.* and 155.207.185.* subdomains.
