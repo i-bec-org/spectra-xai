@@ -30,6 +30,9 @@ class Explain:
 
 
 class PreHocAnalysis(Explain):
+    """
+    A class to provide methods for providing pre-hoc explainability analysis.
+    """
     def correlogram(self, top: int = 5, method: str = "corr"):
         fig, axes = plt.subplots(
             self.dataset.n_outputs, top, figsize=(11.69 * 2, 8.27), squeeze=False
@@ -65,7 +68,7 @@ class PreHocAnalysis(Explain):
         Parameters
         ----------
         y_ranges: List[np.array]
-            A list of length dataset.n_outputs containing the ranges to calculate the mean spectrum wrapped in an np.array.
+            A list of length `spectraxai.dataset.n_outputs` containing the ranges to calculate the mean spectrum wrapped in an np.array.
             For example np.array([0, 1, 5]) means calculate the means from outputs 0 to 1 and 1 to 5.
 
         preprocesses: `List[spectraxai.spectra.SpectralPreprocessing]`, optional
@@ -153,6 +156,9 @@ class PreHocAnalysis(Explain):
 
 
 class PostHocAnalysis(Explain):
+    """
+    A class to provide methods for providing post-hoc explainability analysis.
+    """
     def bar_plot_importance(self, importance: List, ax: plt.Axes = None) -> plt.Axes:
         """Plots a bar plot of the feature importance
 
@@ -164,8 +170,8 @@ class PostHocAnalysis(Explain):
         ax: `plt.Axes`, optional
             An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
 
-        Return
-        ------
+        Returns
+        -------
         `plt.Axes`
             The matplotlib axes with the plot
         """
@@ -194,8 +200,8 @@ class PostHocAnalysis(Explain):
         ax: `plt.Axes
             An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
 
-        Return
-        ------
+        Returns
+        -------
         `plt.Axes`
             The matplotlib axes with the plot
         """

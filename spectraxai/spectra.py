@@ -71,11 +71,22 @@ class SpectralPreprocessing(str, Enum):
 SpectralPreprocessingOptions = Union[
     SpectralPreprocessing, Tuple[SpectralPreprocessing, Dict[str, int]]
 ]
-""" Options passed to pre-processing (e.g. window_length for SG) """
+""" Either a single SpectralPreprocessing or a tuple specifying a SpectralPreprocessing and its assorted options (e.g. window_length for SG).
+
+Examples:
+- SpectralPreprocessing.CR => continuum-removal
+- (SpectralPreprocessing.SG2, {"window_length": 7, "polyorder": 3}) => SG2 with window_length of 7 and polyorder of 3
+"""
 SpectralPreprocessingSequence = List[
     Union[SpectralPreprocessingOptions, List[SpectralPreprocessingOptions]]
 ]
-""" A sequence of one or more spectral pre-treatments (e.g. SG1 + SNV) """
+""" A sequence of one or more spectral pre-treatments (e.g. SG1 + SNV)
+
+Examples:
+- [SpectralPreprocessing.NONE] => no pre-treatment
+- [SpectralPreprocessing.ABS, SpectralPreprocessing.CR] => ABS + CR 
+- [(SpectralPreprocessing.SG1, {"window_length": 7}), SpectralPreprocessing.SNV] => SG1 + SNV
+ """
 
 
 class Spectra:
@@ -85,23 +96,26 @@ class Spectra:
     Can accept a 1-D vector but always returns a 2-D matrix.
     """
 
+    X: np.ndarray
+    """A 2-D matrix representing the spectra"""
+
     def __init__(self, X: np.ndarray) -> None:
-        """X is a np 2D array containing the (sample, wavelengths) matrix"""
+        """X is a np 2D array containing the (samples, wavelengths) matrix"""
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         if X.ndim != 2:
-            raise AssertionError("X should a 2-D matrix")
+            raise AssertionError("X should be a 2-D matrix")
         self.X = X
 
-    def reflectance(self) -> np.ndarray:
+    def reflectance(self) -> "Spectra":
         """Transform absorbance to reflectance"""
         return Spectra(-1 * self.X**10)
 
-    def absorbance(self) -> np.ndarray:
+    def absorbance(self) -> "Spectra":
         """Transform reflectance to absorbance"""
         return Spectra(-1 * np.log10(self.X))
 
-    def snv(self) -> np.ndarray:
+    def snv(self) -> "Spectra":
         """Apply the standard normal variate transform"""
         snv = np.zeros(self.X.shape)
         mu, sd = self.X.mean(axis=-1), self.X.std(axis=-1, ddof=1)
@@ -109,19 +123,19 @@ class Spectra:
             snv[i, :] = (self.X[i, :] - mu[i]) / sd[i]
         return Spectra(snv)
 
-    def sg(self, **kwargs) -> np.ndarray:
+    def sg(self, **kwargs) -> "Spectra":
         """
         Apply a general Savitzky–Golay transform.
 
-        You need to pass as kwargs the parameters of scipy.signal.savgol_filter
+        You need to pass as kwargs the parameters of `scipy.signal.savgol_filter`
         """
         return Spectra(savgol_filter(self.X, **kwargs))
 
-    def cr(self) -> np.ndarray:
-        """Transform using the Continuum Removal"""
-        return Spectra(continuum_removal(self.X))
+    def cr(self) -> "Spectra":
+        """Transform absorbance spectra using the Continuum Removal"""
+        return Spectra(continuum_removal(np.squeeze(self.X)))
 
-    def apply(self, method: SpectralPreprocessing, **kwargs) -> np.ndarray:
+    def apply(self, method: SpectralPreprocessing, **kwargs) -> "Spectra":
         """Apply the transform specified by method"""
         if method == SpectralPreprocessing.REF:
             return self.reflectance()
@@ -140,4 +154,4 @@ class Spectra:
         elif method == SpectralPreprocessing.NONE:
             return self
         else:
-            raise RuntimeError
+            raise RuntimeError("Invalid method specified")

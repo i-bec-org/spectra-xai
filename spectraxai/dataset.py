@@ -16,7 +16,9 @@ class Scale(str, Enum):
     """Scaling of an input feature (or of the output) supported by the `Dataset` class"""
 
     STANDARD = "standard"
+    """Standard scaling, i.e. removing the mean and scaling to unit variance"""
     MINMAX = "min-max"
+    """Scale and translate so that the range is between zero and one"""
 
     def __str__(self):
         return self.name
@@ -45,7 +47,7 @@ DataSplit = Tuple[
     np.ndarray,  # idx_trn
     np.ndarray,  # idx_tst
 ]
-"""A tuple"""
+"""A tuple representing a split for the `Dataset` into training and testing indices"""
 
 
 class Dataset:
@@ -56,6 +58,21 @@ class Dataset:
     Supports methods for pre-processing X, scaling X and Y, splitting the dataset, and more.
     """
 
+    n_samples: int
+    """Number of samples in the dataset"""
+    n_features: int
+    """Number of features in the dataset's input"""
+    n_outputs: int
+    """Number of outputs in the dataset's output"""
+    X: np.ndarray
+    """The spectral data of size (`n_samples`, `n_features`)"""
+    Y: np.ndarray
+    """The output properties of size (`n_samples`, `n_outputs`)"""
+    X_names: List[str]
+    """The names of the input features of size (`n_features`)"""
+    Y_names: List[str]
+    """The names of the output properties of size (`n_outputs`)"""
+
     def __init__(
         self,
         X: np.ndarray,
@@ -64,14 +81,16 @@ class Dataset:
         Y_names: List[str] = [],
     ):
         """
+        Create a new Dataset from input and output arrays
+
         Parameters
         ----------
 
         X: `numpy.ndarray`
-            A 2D matrix of the spectra of size (n_samples, n_features)
+            A 2D matrix of the spectra of size (`n_samples`, `n_features`)
 
         Y: `numpy.ndarray`
-            A 1D vector (n_samples,) or 2D matrix (n_samples, n_outputs) of the output property(ies).
+            A 1D vector (`n_samples`,) or 2D matrix (`n_samples`, `n_outputs`) of the output property(ies).
             If 1D it will be implicitly converted to 2D.
 
         X_names: `list[str]`, optional
@@ -140,7 +159,9 @@ class Dataset:
         if split == DatasetSplit.RANDOM:
             return train_test_split(indices, train_size=opt)
         elif split == DatasetSplit.KENNARD_STONE:
-            _, _, idx_trn, idx_tst = kennardStone.train_test_split(self.X, indices, test_size=(1 - opt))
+            _, _, idx_trn, idx_tst = kennardStone.train_test_split(
+                self.X, indices, test_size=(1 - opt)
+            )
             return idx_trn, idx_tst
         elif split == DatasetSplit.CLHS:
             raise NotImplementedError("clhs not implemented yet")
@@ -161,7 +182,7 @@ class Dataset:
         else:
             raise RuntimeError("Not a valid split method!")
 
-    def subset(self, idx: np.ndarray) -> 'Dataset':
+    def subset(self, idx: np.ndarray) -> "Dataset":
         """
         Subset the dataset using passed indices
 
@@ -203,7 +224,7 @@ class Dataset:
             tst = np.array(list(set(range(0, self.n_samples)).difference(set(trn))))
         return trn, tst
 
-    def preprocess(self, method: SpectralPreprocessingSequence) -> 'Dataset':
+    def preprocess(self, method: SpectralPreprocessingSequence) -> "Dataset":
         """
         Preprocess dataset by method.
 
@@ -224,7 +245,7 @@ class Dataset:
 
     def preprocess_3D(self, methods: List[SpectralPreprocessingSequence]):
         """
-        Preprocess 3D matrix by methods in a list structure.
+        Preprocess spectra into a new 3D matrix by methods in a list structure.
 
         Parameters
         ----------
@@ -235,7 +256,7 @@ class Dataset:
         Returns
         -------
         `numpy.ndarray`
-            A 3D matrix.
+            A 3D matrix of size (`n_samples`, `n_features`, n_preprocesses)
         """
         if len(methods) <= 1:
             raise AssertionError(
@@ -251,10 +272,10 @@ class Dataset:
         """
         Calculate Pearson's correlation between all input features and the outputs
 
-        Return
+        Returns
         ------
         `np.ndarray`
-            A 2-D np.array containing the correlation for each output property of size (n_outputs, n_features)
+            A 2-D np.array containing the correlation for each output property of size (`n_outputs`, `n_features`)
         """
         return np.array(
             [
@@ -270,10 +291,10 @@ class Dataset:
         """
         Calculate the mutual information between all input features and the outputs
 
-        Return
+        Returns
         ------
         `np.ndarray`
-            A 2-D np.array containing the mutual information for each output property of size (n_outputs, n_features)
+            A 2-D np.array containing the mutual information for each output property of size (`n_outputs`, `n_features`)
         """
         normalize = lambda a: a / np.max(a)
         return np.array(

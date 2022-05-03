@@ -1,17 +1,16 @@
-from multiprocessing.sharedctypes import Value
 import time
 from enum import Enum
 from typing import Dict, List, Any, Union
 
 import numpy as np
 import pandas
-
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
-from cubist import Cubist
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
+from sklearn.base import BaseEstimator
+from cubist import Cubist
 
 from spectraxai.utils.modelAssessment import metrics
 from spectraxai.utils.svrParams import sigest
@@ -37,10 +36,27 @@ class Model(str, Enum):
 class StandardModel:
     """Class with standard models for machine learning that can be applied to spectral datasets"""
 
+    model: Model
+    """The type of `Model` used"""
+    init_hyperparameters: Dict
+    """A dictionary of the hyperparameters of the models identified by an expert, to override a grid search"""
+    grid_search_hyperparameters: Dict
+    """A dictionary containing as keys the hyperparameters of the model and as values a list of the potential candidate values"""
+    best_hyperparameters: Dict
+    """A dictionary of the best hyperparameters, either set externally or as identified after calling the train function"""
+    training_time: float
+    """Training time in seconds"""
+    testing_time: float
+    """Time for the prediction in seconds"""
+    best_model: BaseEstimator
+    """The best optimized model after tuning the hyperparameters"""
+    best_score: float
+    """The best score (R2 for regression and accuracy for classification) in the internal validation set corresponding to the best model"""
+
     def __init__(
         self,
         model: Model,
-        best_hyperparameters: Dict = {},
+        init_hyperparameters: Dict = {},
         grid_search_hyperparameters: Dict = {},
     ):
         """
@@ -50,23 +66,20 @@ class StandardModel:
         model: `Model`
             Select a model from `Model` class.
 
-        best_hyperparameters: `dict`
+        init_hyperparameters: `dict`, optional
             A dictionary of pre-selected hyperparameters (e.g. a best model)
 
-        grid_search_hyperparameters: `dict`
+        grid_search_hyperparameters: `dict`, optional
             Specify custom grid search range for the hyperparameters
         """
-        if len(best_hyperparameters) != 0 and len(grid_search_hyperparameters) != 0:
+        if len(init_hyperparameters) != 0 and len(grid_search_hyperparameters) != 0:
             raise AssertionError(
-                "You cannot specify both best_hyperparameters and grid_search_hyperparameters"
+                "You cannot specify both init_hyperparameters and grid_search_hyperparameters"
             )
         self.model = model
-        """The type of `Model` used"""
-        self.best_hyperparameters = best_hyperparameters
-        """A dictionary of the best hyperparameters, either set externally or as identified after calling the train function"""
+        self.init_hyperparameters = init_hyperparameters
         if len(grid_search_hyperparameters) != 0:
             self.grid_search_hyperparameters = grid_search_hyperparameters
-            """A dictionary containing as keys the hyperparameters of the model and as values a list of the potential candidate values"""
         else:
             if model == Model.SVR:
                 self.grid_search_hyperparameters = {
@@ -84,16 +97,13 @@ class StandardModel:
             elif model == Model.CUBIST:
                 self.grid_search_hyperparameters = {
                     "n_committees": [1, 5, 10, 20],
-                    "neighbors": [0, 1, 5, 9],
+                    "neighbors": [1, 5, 9],
+                    "composite": [True],
                 }
         self.training_time = None
-        """Training time in seconds"""
         self.testing_time = None
-        """Time for the prediction in seconds"""
         self.best_model = None
-        """The best optimized model after tuning the hyperparameters"""
         self.best_score = None
-        """The best score (R2 for regression and accuracy for classification) in the internal validation set corresponding to the best model"""
 
     def __vip(self, model):
         t = model.x_scores_
@@ -113,7 +123,7 @@ class StandardModel:
     def train(self, dataset: Dataset, cv: Union[int, List] = 5):
         """Trains the model on a given dataset.
 
-        If you didn't supply the `best_hyperparameters` option to the constructor, then
+        If you didn't supply the `init_hyperparameters` option to the constructor, then
         a grid search optimization process takes place as follows:
         Using the sklearn.model_selection.GridSearchCV approach, a grid search using a
         cross-validation splitting strategy specified by cv is performed. After the optimal
@@ -125,11 +135,11 @@ class StandardModel:
         dataset: `spectraxai.dataset.Dataset`
             the Dataset to train the model
 
-        cv : int, or an iterable, default=5
+        cv: int, or an iterable, default=5
             Determines the cross-validation splitting strategy.
             Possible inputs for cv are:
-            - integer, to specify the number of folds
-            - An iterable yielding (train, test) splits as arrays of indices
+            * integer, to specify the number of folds
+            * An iterable yielding (train, test) splits as arrays of indices
         """
         if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
             raise AssertionError(
@@ -145,29 +155,27 @@ class StandardModel:
             X_train = dataset.X
 
         # If hyperparameters are passed, use them; otherwise run grid search
-        if len(self.best_hyperparameters) != 0 and self.training_time is None:
+        if len(self.init_hyperparameters) != 0:
             if self.model == Model.SVR:
                 self.best_model = SVR(kernel="rbf", max_iter=5e8)
                 self.best_model = self.best_model.set_params(
-                    **self.best_hyperparameters
+                    **self.init_hyperparameters
                 )
             elif self.model == Model.PLS:
                 self.best_model = PLSRegression()
                 self.best_model = self.best_model.set_params(
-                    **self.best_hyperparameters
+                    **self.init_hyperparameters
                 )
             elif self.model == Model.RF:
                 self.best_model = RandomForestRegressor()
                 self.best_model = self.best_model.set_params(
-                    **self.best_hyperparameters
+                    **self.init_hyperparameters
                 )
             elif self.model == Model.CUBIST:
-                self.best_model = Cubist()
-                self.best_model = self.best_model.set_params(
-                    **self.best_hyperparameters
-                )
+                self.best_model = Cubist(**self.init_hyperparameters)
             trn_t0 = time.time()
             self.best_model.fit(X_train, np.squeeze(dataset.Y))
+            self.best_hyperparameters = self.init_hyperparameters
             trn_t1 = time.time()
         else:
             if self.model == Model.SVR:
@@ -203,8 +211,22 @@ class StandardModel:
         self.training_time = trn_t1 - trn_t0
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
+        """Predict using the best_model from a new unknown input
+
+        Parameters
+        ----------
+        X_test: `np.ndarray`
+            The new input data to predict their output
+
+        Returns
+        -------
+        `np.ndarray`
+            A np.ndarray of size (n_test_samples, n_outputs) with the predictions
+        """
         if self.best_model is None:
             raise RuntimeError("You need to train the model first")
+        if X_test.ndim == 1:
+            X_test = X_test.reshape(1, -1)
         tst_t0 = time.time()
         if self.model == Model.SVR:
             X_test = self.scaler.transform(X_test)
@@ -217,8 +239,8 @@ class StandardModel:
         self,
         dataset: Dataset,
         preprocess: SpectralPreprocessingSequence = SpectralPreprocessing.NONE,
-        idx_trn: np.array = np.array([]),
-        idx_tst: np.array = np.array([]),
+        idx_trn: np.ndarray = np.array([]),
+        idx_tst: np.ndarray = np.array([]),
         get_model: bool = False,
     ) -> List[Dict]:
         """Trains and tests a model given a dataset and a spectral pre-processing sequence.
@@ -256,13 +278,9 @@ class StandardModel:
         if idx_tst.size > 0 and idx_trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
         elif idx_trn.size > 0 and idx_tst.size == 0:
-            idx_trn, idx_tst = dataset.train_test_split_explicit(
-                trn=idx_trn
-            )
+            idx_trn, idx_tst = dataset.train_test_split_explicit(trn=idx_trn)
         elif idx_trn.size == 0 and idx_tst.size > 0:
-            idx_trn, idx_tst = dataset.train_test_split_explicit(
-                tst=idx_tst
-            )
+            idx_trn, idx_tst = dataset.train_test_split_explicit(tst=idx_tst)
 
         dataset = dataset.preprocess(preprocess)
         self.train(Dataset(dataset.X[idx_trn], dataset.Y[idx_trn]))
@@ -303,8 +321,8 @@ class StandardModel:
         self,
         dataset: Dataset,
         preprocesses: List[SpectralPreprocessingSequence] = [],
-        idx_trn: np.array = np.array([]),
-        idx_tst: np.array = np.array([]),
+        idx_trn: np.ndarray = np.array([]),
+        idx_tst: np.ndarray = np.array([]),
     ) -> pandas.DataFrame:
         """Train a model using different SpectralPreprocessingSequences and predict on the test set
 
@@ -316,7 +334,7 @@ class StandardModel:
             the Dataset to train the model
 
         preprocesses: `spectraxai.spectra.List[SpectralPreprocessingSequence]`
-            List of pre-processing sequences to test. Defaults to [].
+            List of different pre-processing sequences to test. Defaults to [].
 
         idx_trn: `np.array`
             The indices of the trn samples. Defaults to np.array([]).

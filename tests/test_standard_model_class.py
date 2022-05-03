@@ -16,18 +16,19 @@ class TestStandardModelClass(unittest.TestCase):
             StandardModel(Model.PLS),
             StandardModel(Model.SVR),
             StandardModel(Model.RF),
-            StandardModel(Model.PLS, best_hyperparameters={"n_components": 2}),
+            StandardModel(Model.CUBIST),
+            StandardModel(Model.PLS, init_hyperparameters={"n_components": 2}),
             StandardModel(
                 Model.SVR,
-                best_hyperparameters={"C": 16.0, "epsilon": 0.5, "gamma": 0.001},
+                init_hyperparameters={"C": 16.0, "epsilon": 0.5, "gamma": 0.001},
             ),
             StandardModel(
                 Model.RF,
-                best_hyperparameters={"max_features": "log2", "n_estimators": 50},
+                init_hyperparameters={"max_features": "log2", "n_estimators": 50},
             ),
             StandardModel(
                 Model.CUBIST,
-                best_hyperparameters={
+                init_hyperparameters={
                     "n_committees": 5,
                     "neighbors": 1,
                     "composite": True,
