@@ -84,7 +84,7 @@ SpectralPreprocessingSequence = List[
 
 Examples:
 - [SpectralPreprocessing.NONE] => no pre-treatment
-- [SpectralPreprocessing.ABS, SpectralPreprocessing.CR] => ABS + CR 
+- [SpectralPreprocessing.ABS, SpectralPreprocessing.CR] => ABS + CR
 - [(SpectralPreprocessing.SG1, {"window_length": 7}), SpectralPreprocessing.SNV] => SG1 + SNV
  """
 
