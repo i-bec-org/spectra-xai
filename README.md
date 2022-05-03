@@ -58,7 +58,7 @@ pytest --ignore=examples --doctest-modules --html=report.html --cov=. --cov-repo
 
 ## Building documentation
 
-Documentation may be generate via:
+Documentation may be generated via:
 
 ```
 pdoc -o html spectraxai
