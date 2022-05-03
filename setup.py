@@ -26,6 +26,7 @@ setup(
         "matplotlib",
         "cubist",
         "seaborn",
+        "sage-importance"
     ],
     extras_require={
         "dev": [
