@@ -1,9 +1,9 @@
-import pandas
-import numpy as np
 from enum import Enum
 from numbers import Number
 from typing import Tuple, Dict, List, Any
 
+import pandas
+import numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.feature_selection import mutual_info_regression
@@ -42,10 +42,6 @@ class DatasetSplit(str, Enum):
 
 
 DataSplit = Tuple[
-    np.ndarray,  # X_trn
-    np.ndarray,  # X_tst
-    np.ndarray,  # Y_trn
-    np.ndarray,  # Y_tst
     np.ndarray,  # idx_trn
     np.ndarray,  # idx_tst
 ]
@@ -111,7 +107,7 @@ class Dataset:
 
     def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
         """
-        Splits dataset with method split to train and test by trn percentage.
+        Splits dataset with passed split method to train and test.
 
         Parameters
         ----------
@@ -126,7 +122,7 @@ class Dataset:
         Returns
         -------
         `DataSplit`
-            The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
+            The idx_trn, idx_tst tuple. Use e.g. X[idx_trn], Y[idx_trn] to get the training dataset.
         """
         indices = np.arange(self.X.shape[0])
         if split == DatasetSplit.RANDOM or split == DatasetSplit.KENNARD_STONE:
@@ -142,37 +138,45 @@ class Dataset:
             if opt <= 1:
                 raise ValueError(msg)
         if split == DatasetSplit.RANDOM:
-            return train_test_split(self.X, self.Y, indices, train_size=opt)
+            return train_test_split(indices, train_size=opt)
         elif split == DatasetSplit.KENNARD_STONE:
-            return kennardStone.train_test_split(
-                self.X, self.Y, indices, test_size=(1 - opt)
-            )
+            _, _, idx_trn, idx_tst = kennardStone.train_test_split(self.X, indices, test_size=(1 - opt))
+            return idx_trn, idx_tst
         elif split == DatasetSplit.CLHS:
             raise NotImplementedError("clhs not implemented yet")
         elif split == DatasetSplit.CROSS_VALIDATION:
             kf = KFold(opt, shuffle=True)
-            X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst = [], [], [], [], [], []
+            idx_trn, idx_tst = [], []
             for trn_index, tst_index in kf.split(self.X):
-                X_trn.append(self.X[trn_index, :])
-                X_tst.append(self.X[tst_index, :])
-                Y_trn.append(self.Y[trn_index, :])
-                Y_tst.append(self.Y[tst_index, :])
-                idx_trn.append(trn_index)
-                idx_tst.append(tst_index)
-            return X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst
+                idx_trn.append(np.array(trn_index))
+                idx_tst.append(np.array(tst_index))
+            return np.array(idx_trn, dtype=object), np.array(idx_tst, dtype=object)
         elif split == DatasetSplit.STRATIFIED:
             skf = StratifiedKFold(n_splits=opt)
-            X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst = [], [], [], [], [], []
+            idx_trn, idx_tst = [], []
             for trn_index, tst_index in skf.split(self.X, self.Y):
-                X_trn.append(self.X[trn_index, :])
-                X_tst.append(self.X[tst_index, :])
-                Y_trn.append(self.Y[trn_index, :])
-                Y_tst.append(self.Y[tst_index, :])
-                idx_trn.append(trn_index)
-                idx_tst.append(tst_index)
-            return X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst
+                idx_trn.append(np.array(trn_index))
+                idx_tst.append(np.array(tst_index))
+            return np.array(idx_trn, dtype=object), np.array(idx_tst, dtype=object)
         else:
             raise RuntimeError("Not a valid split method!")
+
+    def subset(self, idx: np.ndarray) -> 'Dataset':
+        """
+        Subset the dataset using passed indices
+
+        Parameters
+        ----------
+        idx: np.ndarray
+            The indices to subset by
+
+        Returns
+        -------
+        `Dataset`
+            A new subsetted Dataset
+
+        """
+        return Dataset(self.X[idx], self.Y[idx], self.X_names, self.Y_names)
 
     def train_test_split_explicit(
         self, trn: np.array = np.array([]), tst: np.array = np.array([])
@@ -183,19 +187,23 @@ class Dataset:
         Returns
         -------
         `DataSplit`
-            The X_trn, X_tst, Y_trn, Y_tst, idx_trn, idx_tst tuple
+            The idx_trn, idx_tst tuple
         """
         if tst.size == 0 and trn.size == 0:
             raise AssertionError("You need to specify either tst or trn indices")
         if tst.size > 0 and trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
         if tst.size > 0:
-            trn = np.array(list(set(range(0, self.Y.shape[0])).difference(set(tst))))
+            if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
+                raise AssertionError("Passed indices contain out of bound values")
+            trn = np.array(list(set(range(0, self.n_samples)).difference(set(tst))))
         else:
-            tst = np.array(list(set(range(0, self.Y.shape[0])).difference(set(trn))))
-        return self.X[trn, :], self.X[tst, :], self.Y[trn, :], self.Y[tst, :], trn, tst
+            if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
+                raise AssertionError("Passed indices contain out of bound values")
+            tst = np.array(list(set(range(0, self.n_samples)).difference(set(trn))))
+        return trn, tst
 
-    def preprocess(self, method: SpectralPreprocessingSequence):
+    def preprocess(self, method: SpectralPreprocessingSequence) -> 'Dataset':
         """
         Preprocess dataset by method.
 
@@ -208,7 +216,7 @@ class Dataset:
         Returns
         -------
         `Dataset`
-            A Dataset object.
+            A new Dataset object.
         """
         return Dataset(
             self.__preprocess(self.X, method), self.Y, self.X_names, self.Y_names

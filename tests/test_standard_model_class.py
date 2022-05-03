@@ -1,3 +1,4 @@
+from multiprocessing.sharedctypes import Value
 import unittest
 import os
 import pandas
@@ -5,7 +6,7 @@ import numpy as np
 from .context import spectraxai, DATA_FOLDER
 from spectraxai.models import Model, StandardModel
 from spectraxai.spectra import SpectralPreprocessing
-from spectraxai.dataset import Dataset
+from spectraxai.dataset import Dataset, DatasetSplit
 
 
 class TestStandardModelClass(unittest.TestCase):
@@ -110,55 +111,63 @@ class TestStandardModelClass(unittest.TestCase):
     def test_wrong_params_model_train(self):
         for model in self.models:
             # Neither idx_trn nor idx_tst
-            self.assertRaises(AssertionError, model.train, self.dataset1D)
+            self.assertRaises(AssertionError, model.train_and_test, self.dataset1D)
             self.assertRaises(
-                AssertionError, model.train, self.dataset1D, SpectralPreprocessing.NONE
+                AssertionError,
+                model.train_and_test,
+                self.dataset1D,
+                SpectralPreprocessing.NONE,
             )
             # Both idx_trn and idx_tst
             self.assertRaises(
                 AssertionError,
-                model.train,
+                model.train_and_test,
                 self.dataset1D,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             self.assertRaises(
                 AssertionError,
-                model.train,
+                model.train_and_test,
                 self.dataset1D,
                 SpectralPreprocessing.NONE,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             # No list of sequences given
-            self.assertRaises(AssertionError, model.train_with_sequence, self.dataset1D)
             self.assertRaises(
-                AssertionError,
-                model.train_with_sequence,
+                ValueError, model.train_and_test_with_sequence, self.dataset1D
+            )
+            self.assertRaises(
+                ValueError,
+                model.train_and_test_with_sequence,
                 self.dataset1D,
                 idx_trn=self.idx_trn,
             )
             self.assertRaises(
-                AssertionError,
-                model.train_with_sequence,
+                ValueError,
+                model.train_and_test_with_sequence,
                 self.dataset1D,
                 idx_tst=self.idx_tst,
             )
             # Neither idx_trn nor idx_tst passed
             self.assertRaises(
-                AssertionError, model.train_with_sequence, self.dataset1D, self.methods
+                AssertionError,
+                model.train_and_test_with_sequence,
+                self.dataset1D,
+                self.methods,
             )
             # Both idx_trn and idx_tst passed
             self.assertRaises(
                 AssertionError,
-                model.train_with_sequence,
+                model.train_and_test_with_sequence,
                 self.dataset1D,
                 self.methods,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             # This should work
-            model.train_with_sequence(
+            model.train_and_test_with_sequence(
                 self.dataset1D, self.methods, idx_trn=self.idx_trn
             )
 
@@ -167,20 +176,51 @@ class TestStandardModelClass(unittest.TestCase):
             if model.model in [Model.SVR, Model.CUBIST]:
                 self.assertRaises(
                     AssertionError,
-                    model.train,
+                    model.train_and_test,
                     self.dataset2D,
                     idx_trn=self.idx_trn,
                 )
                 self.assertRaises(
                     AssertionError,
-                    model.train_with_sequence,
+                    model.train_and_test_with_sequence,
                     self.dataset2D,
                     self.methods,
                     idx_trn=self.idx_trn,
                 )
             else:
                 self.assertEqual(
-                    len(model.train(self.dataset2D, idx_trn=self.idx_trn)), 2
+                    len(model.train_and_test(self.dataset2D, idx_trn=self.idx_trn)), 2
+                )
+
+    def test_train_and_test_with_sequence(self):
+        models = [
+            StandardModel(
+                Model.PLS, grid_search_hyperparameters={"n_components": [10, 20]}
+            ),
+            StandardModel(
+                Model.RF,
+                grid_search_hyperparameters={
+                    "max_features": ["auto"],
+                    "n_estimators": [50, 100],
+                },
+            ),
+        ]
+        for model in models:
+            idx_trn, idx_tst = self.dataset1D.train_test_split(
+                DatasetSplit.CROSS_VALIDATION, 3
+            )
+            for trn, tst in [(self.idx_trn, self.idx_tst), (idx_trn, idx_tst)]:
+                model.train_and_test_with_sequence(
+                    self.dataset1D, self.methods, idx_trn=trn
+                )
+                model.train_and_test_with_sequence(
+                    self.dataset1D, self.methods, idx_tst=tst
+                )
+                model.train_and_test_with_sequence(
+                    self.dataset2D, self.methods, idx_trn=trn
+                )
+                model.train_and_test_with_sequence(
+                    self.dataset2D, self.methods, idx_tst=tst
                 )
 
 

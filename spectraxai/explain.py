@@ -6,6 +6,7 @@ import matplotlib as mpl
 import matplotlib.ticker as ticker
 import pandas
 import seaborn
+import sage
 
 from spectraxai.dataset import Dataset
 from spectraxai.spectra import SpectralPreprocessing
@@ -266,3 +267,13 @@ class PostHocAnalysis(Explain):
             )
 
         return ax
+
+    def sage_importance(self, model):
+        # Set up an imputer to handle missing features
+        imputer = sage.MarginalImputer(model, self.dataset.X)
+
+        # Set up an estimator
+        estimator = sage.KernelEstimator(imputer, 'mse')
+
+        # Calculate SAGE values
+        return estimator(self.dataset.X, self.dataset.Y)

@@ -53,16 +53,6 @@ class TestDatasetClass(unittest.TestCase):
             Y_names=["output1"],
         )
 
-    def _assert_X_size(self, X_trn, X_tst):
-        self.assertTrue(X_trn.shape[1] == X_tst.shape[1] == self.nfeatures)
-        self.assertTrue(X_trn.shape[0] == int(self.split_size * self.nsamples))
-        self.assertTrue(X_tst.shape[0] == int((1 - self.split_size) * self.nsamples))
-
-    def _assert_Y_size(self, y_trn, y_tst):
-        self.assertTrue(y_tst.ndim == y_trn.ndim == 2)
-        self.assertTrue(y_trn.shape[0] == int(self.split_size * self.nsamples))
-        self.assertTrue(y_tst.shape[0] == int((1 - self.split_size) * self.nsamples))
-
     def _assert_indices(self, idx_trn, idx_tst):
         self.assertTrue(idx_trn.ndim == idx_tst.ndim == 1)
         self.assertTrue(idx_trn.shape[0] == int(self.split_size * self.nsamples))
@@ -79,9 +69,7 @@ class TestDatasetClass(unittest.TestCase):
                 method,
                 "str",
             )
-            self.assertRaises(
-                TypeError, self.datasetY1dim.train_test_split, method, -2
-            )
+            self.assertRaises(TypeError, self.datasetY1dim.train_test_split, method, -2)
             self.assertRaises(
                 ValueError, self.datasetY1dim.train_test_split, method, -2.0
             )
@@ -112,23 +100,30 @@ class TestDatasetClass(unittest.TestCase):
         )
         # Don't pass either trn or tst to explicit split
         self.assertRaises(AssertionError, self.datasetY1dim.train_test_split_explicit)
+        # Pass out of bound values to explicit split
+        self.assertRaises(
+            AssertionError,
+            self.datasetY1dim.train_test_split_explicit,
+            tst=np.array([-1, 0])
+        )
+        self.assertRaises(
+            AssertionError,
+            self.datasetY1dim.train_test_split_explicit,
+            trn=np.array([0, 1, 100000])
+        )
 
     def test_random_split(self):
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
-            X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst = dataset.train_test_split(
+            idx_trn, idx_tst = dataset.train_test_split(
                 DatasetSplit.RANDOM, self.split_size
             )
-            self._assert_X_size(X_trn, X_tst)
-            self._assert_Y_size(y_trn, y_tst)
             self._assert_indices(idx_trn, idx_tst)
 
     def test_ks_split(self):
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
-            X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst = dataset.train_test_split(
+            idx_trn, idx_tst = dataset.train_test_split(
                 DatasetSplit.KENNARD_STONE, self.split_size
             )
-            self._assert_X_size(X_trn, X_tst)
-            self._assert_Y_size(y_trn, y_tst)
             self._assert_indices(idx_trn, idx_tst)
 
     def test_explicit_split(self):
@@ -138,16 +133,7 @@ class TestDatasetClass(unittest.TestCase):
             replace=False,
         )
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
-            (
-                X_trn,
-                X_tst,
-                y_trn,
-                y_tst,
-                idx_trn,
-                idx_tst,
-            ) = dataset.train_test_split_explicit(trn=trn)
-            self._assert_X_size(X_trn, X_tst)
-            self._assert_Y_size(y_trn, y_tst)
+            idx_trn, idx_tst = dataset.train_test_split_explicit(trn=trn)
             self._assert_indices(idx_trn, idx_tst)
         tst = np.random.choice(
             np.arange(self.nsamples),
@@ -155,71 +141,43 @@ class TestDatasetClass(unittest.TestCase):
             replace=False,
         )
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
-            (
-                X_trn,
-                X_tst,
-                y_trn,
-                y_tst,
-                idx_trn,
-                idx_tst,
-            ) = dataset.train_test_split_explicit(tst=tst)
-            self._assert_X_size(X_trn, X_tst)
-            self._assert_Y_size(y_trn, y_tst)
+            idx_trn, idx_tst = dataset.train_test_split_explicit(tst=tst)
             self._assert_indices(idx_trn, idx_tst)
 
-    def _assertions_for_folded_splits(
-        self, X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst, N_FOLDS
-    ):
-        self.assertTrue(X_trn.shape[1] == X_tst.shape[1] == self.nfeatures)
-        self.assertTrue(y_tst.ndim == y_trn.ndim == 2)
-        self.assertAlmostEqual(
-            X_trn.shape[0],
-            (N_FOLDS - 1) / N_FOLDS * self.nsamples,
-            delta=0.02 * self.nsamples,
-        )
-        self.assertAlmostEqual(
-            X_tst.shape[0], 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
-        )
-        self.assertAlmostEqual(
-            y_trn.shape[0],
-            (N_FOLDS - 1) / N_FOLDS * self.nsamples,
-            delta=0.02 * self.nsamples,
-        )
-        self.assertAlmostEqual(
-            y_tst.shape[0], 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
-        )
-        self.assertTrue(idx_trn.ndim == idx_tst.ndim == 1)
-        self.assertFalse(bool(set(idx_trn).intersection(idx_tst)))
+    def _assertions_for_folded_splits(self, idx_trn, idx_tst, N_FOLDS):
+        self.assertTrue(idx_trn.shape[0] == idx_tst.shape[0] == N_FOLDS)
+        for i in range(N_FOLDS):
+            self.assertTrue(idx_trn[i].ndim == idx_tst[i].ndim == 1)
+            self.assertFalse(bool(set(idx_trn[i]).intersection(idx_tst[i])))
+            self.assertAlmostEqual(
+                idx_trn[i].size,
+                (N_FOLDS - 1) / N_FOLDS * self.nsamples,
+                delta=0.02 * self.nsamples,
+            )
+            self.assertAlmostEqual(
+                idx_tst[i].size, 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
+            )
 
     def test_folded_splits(self):
         N_FOLDS = 5
         # Cross-validation
         for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
-            X_trn, X_tst, y_trn, y_tst, idx_trn, idx_tst = dataset.train_test_split(
+            idx_trn, idx_tst = dataset.train_test_split(
                 DatasetSplit.CROSS_VALIDATION, N_FOLDS
             )
-            for i in range(N_FOLDS):
-                self._assertions_for_folded_splits(
-                    X_trn[i],
-                    X_tst[i],
-                    y_trn[i],
-                    y_tst[i],
-                    idx_trn[i],
-                    idx_tst[i],
-                    N_FOLDS,
-                )
-        # Stratified
-        (
-            X_trn,
-            X_tst,
-            y_trn,
-            y_tst,
-            idx_trn,
-            idx_tst,
-        ) = self.datasetYclass.train_test_split(DatasetSplit.STRATIFIED, N_FOLDS)
-        for i in range(N_FOLDS):
             self._assertions_for_folded_splits(
-                X_trn[i], X_tst[i], y_trn[i], y_tst[i], idx_trn[i], idx_tst[i], N_FOLDS
+                idx_trn,
+                idx_tst,
+                N_FOLDS,
+            )
+            # Stratified
+            idx_trn, idx_tst = self.datasetYclass.train_test_split(
+                DatasetSplit.STRATIFIED, N_FOLDS
+            )
+            self._assertions_for_folded_splits(
+                idx_trn,
+                idx_tst,
+                N_FOLDS,
             )
 
     def test_calculate_corr(self):
@@ -358,16 +316,11 @@ class TestDatasetClass(unittest.TestCase):
             )
         )
 
-        (
-            X_trn,
-            X_tst,
-            y_trn,
-            y_tst,
-            idx_trn,
-            idx_tst,
-        ) = self.datasetY2dim.train_test_split(
+        idx_trn, idx_tst = self.datasetY2dim.train_test_split(
             DatasetSplit.KENNARD_STONE, self.split_size
         )
+        X_trn, y_trn = self.datasetY2dim.X[idx_trn], self.datasetY2dim.Y[idx_trn]
+        X_tst, y_tst = self.datasetY2dim.X[idx_tst], self.datasetY2dim.Y[idx_tst]
 
         y_trn_scaled = Dataset(X_trn, y_trn).apply_scale_Y(Scale.STANDARD)
         y_tst_scaled = Dataset(X_tst, y_tst).apply_scale_Y(
