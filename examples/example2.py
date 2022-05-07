@@ -1,4 +1,3 @@
-from spectraxai import dataset
 from spectraxai.dataset import Dataset, DatasetSplit
 from spectraxai.spectra import SpectralPreprocessing
 from spectraxai.models import Model, StandardModel

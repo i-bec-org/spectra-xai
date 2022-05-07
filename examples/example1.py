@@ -37,11 +37,5 @@ methods = [
     [SpectralPreprocessing.NONE, SpectralPreprocessing.SNV],
 ]
 
-for method in methods:
-    for i, fold in enumerate(idx_trn):
-        res = StandardModel(Model.PLS).train_and_test(dataset, method, fold)
-        print(
-            "{0}, fold {1}: RMSE {2:.2f}".format(
-                res[0]["pre_process"], i + 1, res[0]["RMSE"]
-            )
-        )
+res = StandardModel(Model.PLS).train_and_test_multiple(dataset, methods, idx_trn)
+print(res[["pre_process", "fold", "RMSE", "R2", "RPIQ"]])
