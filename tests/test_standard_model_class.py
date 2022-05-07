@@ -137,38 +137,38 @@ class TestStandardModelClass(unittest.TestCase):
             )
             # No list of sequences given
             self.assertRaises(
-                ValueError, model.train_and_test_with_sequence, self.dataset1D
+                ValueError, model.train_and_test_multiple, self.dataset1D
             )
             self.assertRaises(
                 ValueError,
-                model.train_and_test_with_sequence,
+                model.train_and_test_multiple,
                 self.dataset1D,
                 idx_trn=self.idx_trn,
             )
             self.assertRaises(
                 ValueError,
-                model.train_and_test_with_sequence,
+                model.train_and_test_multiple,
                 self.dataset1D,
                 idx_tst=self.idx_tst,
             )
             # Neither idx_trn nor idx_tst passed
             self.assertRaises(
                 AssertionError,
-                model.train_and_test_with_sequence,
+                model.train_and_test_multiple,
                 self.dataset1D,
                 self.methods,
             )
             # Both idx_trn and idx_tst passed
             self.assertRaises(
                 AssertionError,
-                model.train_and_test_with_sequence,
+                model.train_and_test_multiple,
                 self.dataset1D,
                 self.methods,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             # This should work
-            model.train_and_test_with_sequence(
+            model.train_and_test_multiple(
                 self.dataset1D, self.methods, idx_trn=self.idx_trn
             )
 
@@ -183,7 +183,7 @@ class TestStandardModelClass(unittest.TestCase):
                 )
                 self.assertRaises(
                     AssertionError,
-                    model.train_and_test_with_sequence,
+                    model.train_and_test_multiple,
                     self.dataset2D,
                     self.methods,
                     idx_trn=self.idx_trn,
@@ -193,7 +193,7 @@ class TestStandardModelClass(unittest.TestCase):
                     len(model.train_and_test(self.dataset2D, idx_trn=self.idx_trn)), 2
                 )
 
-    def test_train_and_test_with_sequence(self):
+    def test_train_and_test_multiple(self):
         models = [
             StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [10, 20]}
@@ -211,16 +211,16 @@ class TestStandardModelClass(unittest.TestCase):
                 DatasetSplit.CROSS_VALIDATION, 3
             )
             for trn, tst in [(self.idx_trn, self.idx_tst), (idx_trn, idx_tst)]:
-                model.train_and_test_with_sequence(
+                model.train_and_test_multiple(
                     self.dataset1D, self.methods, idx_trn=trn
                 )
-                model.train_and_test_with_sequence(
+                model.train_and_test_multiple(
                     self.dataset1D, self.methods, idx_tst=tst
                 )
-                model.train_and_test_with_sequence(
+                model.train_and_test_multiple(
                     self.dataset2D, self.methods, idx_trn=trn
                 )
-                model.train_and_test_with_sequence(
+                model.train_and_test_multiple(
                     self.dataset2D, self.methods, idx_tst=tst
                 )
 

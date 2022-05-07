@@ -242,7 +242,7 @@ class StandardModel:
         idx_trn: np.ndarray = np.array([]),
         idx_tst: np.ndarray = np.array([]),
         get_model: bool = False,
-    ) -> List[Dict]:
+    ) -> pandas.DataFrame:
         """Trains and tests a model given a dataset and a spectral pre-processing sequence.
 
         Pass here the whole dataset of (X, Y) and either specify idx_trn (training indices) or idx_tst (testing indices).
@@ -267,8 +267,8 @@ class StandardModel:
 
         Returns
         -------
-        `List[Dict]`
-            A dictionary containing the accuracy results and assorted metadata for each output property
+        `pandas.DataFrame`
+            The accuracy results and assorted metadata for each output property
         """
 
         if idx_tst.size == 0 and idx_trn.size == 0:
@@ -277,6 +277,20 @@ class StandardModel:
             )
         if idx_tst.size > 0 and idx_trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
+        if idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray):
+            results = []
+            for fold in range(idx_trn.shape[0]):
+                result = self.train_and_test(dataset, preprocess, idx_trn=idx_trn[fold])
+                result["fold"] = fold + 1
+                results.append(result)
+            return pandas.concat(results, ignore_index=True)
+        elif idx_tst.size > 0 and isinstance(idx_tst[0], np.ndarray):
+            results = []
+            for fold in range(idx_tst.shape[0]):
+                result = self.train_and_test(dataset, preprocess, idx_tst=idx_tst[fold])
+                result["fold"] = fold + 1
+                results.append(result)
+            return pandas.concat(results, ignore_index=True)
         elif idx_trn.size > 0 and idx_tst.size == 0:
             idx_trn, idx_tst = dataset.train_test_split_explicit(trn=idx_trn)
         elif idx_trn.size == 0 and idx_tst.size > 0:
@@ -301,7 +315,7 @@ class StandardModel:
                 res["SVs"] = len(self.best_model.support_)
             elif self.model == Model.PLS:
                 res["n_components"] = self.best_hyperparameters["n_components"]
-                res["VIP"] = self.__vip(self.best_model)
+                res["feature_importance"] = self.__vip(self.best_model)
             elif self.model == Model.RF:
                 for key in ["max_features", "n_estimators"]:
                     res[key] = self.best_hyperparameters[key]
@@ -315,9 +329,9 @@ class StandardModel:
             if get_model:
                 res["model"] = self.best_model
             results.append(res)
-        return results
+        return pandas.DataFrame(results)
 
-    def train_and_test_with_sequence(
+    def train_and_test_multiple(
         self,
         dataset: Dataset,
         preprocesses: List[SpectralPreprocessingSequence] = [],
@@ -345,62 +359,15 @@ class StandardModel:
         Returns
         -------
         `pandas.DataFrame`
-            Returns a dataframe with the results of the trained models. By default, no model is returned to keep a low memory footprint.
+            Returns a dataframe with the results of the trained models.
+            By default, no model is returned to keep a low memory footprint.
         """
         if len(preprocesses) == 0:
             raise ValueError(
                 "The list of SpectralPreprocessingSequence may not be empty"
             )
-        if idx_tst.size == 0 and idx_trn.size == 0:
-            raise AssertionError("You need to specify either tst or trn indices")
-        if idx_tst.size > 0 and idx_trn.size > 0:
-            raise AssertionError("You cannot specify both trn and tst")
-        common = [
-            "pre_process",
-            "training_time",
-            "testing_time",
-            "val_score",
-            "N",
-            "RMSE",
-            "R2",
-            "RPIQ",
+        results = [
+            self.train_and_test(dataset, preprocess, idx_trn, idx_tst)
+            for preprocess in preprocesses
         ]
-        if (idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray)) or (
-            idx_tst.size > 0 and isinstance(idx_tst[0], np.ndarray)
-        ):
-            common += ["fold"]
-        if self.model == Model.PLS:
-            dataFrame = pandas.DataFrame(columns=common + ["n_components", "VIP"])
-        elif self.model == Model.SVR:
-            dataFrame = pandas.DataFrame(
-                columns=common + ["epsilon", "C", "gamma", "SVs"]
-            )
-        elif self.model == Model.RF:
-            dataFrame = pandas.DataFrame(
-                columns=common + ["max_features", "n_estimators", "feature_importance"]
-            )
-        elif self.model == Model.CUBIST:
-            dataFrame = pandas.DataFrame(
-                columns=common + ["n_committees", "neighbors", "feature_importance"]
-            )
-        for preprocess in preprocesses:
-            if idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray):
-                for fold in range(idx_trn.shape[0]):
-                    for result in self.train_and_test(
-                        dataset, preprocess, idx_trn=idx_trn[fold]
-                    ):
-                        result["fold"] = fold + 1
-                        dataFrame.loc[len(dataFrame)] = result
-            elif idx_tst.size > 0 and isinstance(idx_tst[0], np.ndarray):
-                for fold in range(idx_tst.shape[0]):
-                    for result in self.train_and_test(
-                        dataset, preprocess, idx_tst=idx_tst[fold]
-                    ):
-                        result["fold"] = fold + 1
-                        dataFrame.loc[len(dataFrame)] = result
-            else:
-                for result in self.train_and_test(
-                    dataset, preprocess, idx_trn, idx_tst
-                ):
-                    dataFrame.loc[len(dataFrame)] = result
-        return dataFrame
+        return pandas.concat(results, ignore_index=True)

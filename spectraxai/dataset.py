@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.feature_selection import mutual_info_regression
+from sklearn.utils.validation import check_X_y
 
 import spectraxai.utils.kennardStone as kennardStone
 from spectraxai.spectra import Spectra, SpectralPreprocessingSequence
@@ -110,6 +111,7 @@ class Dataset:
         if isinstance(Y, pandas.DataFrame) or isinstance(Y, pandas.Series):
             Y = Y.to_numpy()
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
+        check_X_y(X, Y, multi_output=True)
         self.n_samples = self.X.shape[0]
         self.n_features = self.X.shape[1]
         self.n_outputs = self.Y.shape[1]
@@ -197,6 +199,10 @@ class Dataset:
             A new subsetted Dataset
 
         """
+        if idx.size == 0:
+            raise ValueError("Passed indices for subsetting cannot be empty")
+        if idx.size > 0 and isinstance(idx[0], np.ndarray):
+            raise ValueError("Expected indices array to contain only one dimension")
         return Dataset(self.X[idx], self.Y[idx], self.X_names, self.Y_names)
 
     def train_test_split_explicit(
@@ -204,6 +210,14 @@ class Dataset:
     ) -> DataSplit:
         """
         Splits dataset to train and test from pre-selected by the user trn or tst indices.
+
+        Parameters
+        ----------
+        trn: np.ndarray, optional
+            Contains the indices of the training samples
+
+        tst: np.ndarray, optional
+            Contains the indices of the testing samples
 
         Returns
         -------
@@ -214,10 +228,14 @@ class Dataset:
             raise AssertionError("You need to specify either tst or trn indices")
         if tst.size > 0 and trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
-        if tst.size > 0:
+        if tst.size > 0 and isinstance(tst[0], np.ndarray):
+            trn = np.array([self.train_test_split_explicit(tst=fold)[0] for fold in tst])
+        elif tst.size > 0:
             if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
             trn = np.array(list(set(range(0, self.n_samples)).difference(set(tst))))
+        elif trn.size > 0 and isinstance(trn[0], np.ndarray):
+            tst = np.array([self.train_test_split_explicit(trn=fold)[1] for fold in trn])
         else:
             if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")

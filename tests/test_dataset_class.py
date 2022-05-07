@@ -59,6 +59,20 @@ class TestDatasetClass(unittest.TestCase):
         self.assertTrue(idx_tst.shape[0] == int((1 - self.split_size) * self.nsamples))
         self.assertFalse(bool(set(idx_trn).intersection(idx_tst)))
 
+    def _assertions_for_folded_splits(self, idx_trn, idx_tst, N_FOLDS):
+        self.assertTrue(idx_trn.shape[0] == idx_tst.shape[0] == N_FOLDS)
+        for i in range(N_FOLDS):
+            self.assertTrue(idx_trn[i].ndim == idx_tst[i].ndim == 1)
+            self.assertFalse(bool(set(idx_trn[i]).intersection(idx_tst[i])))
+            self.assertAlmostEqual(
+                idx_trn[i].size,
+                (N_FOLDS - 1) / N_FOLDS * self.nsamples,
+                delta=0.02 * self.nsamples,
+            )
+            self.assertAlmostEqual(
+                idx_tst[i].size, 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
+            )
+
     def test_wrong_params(self):
         # Wrong opt param
         splits_a = [DatasetSplit.RANDOM, DatasetSplit.KENNARD_STONE]
@@ -144,19 +158,17 @@ class TestDatasetClass(unittest.TestCase):
             idx_trn, idx_tst = dataset.train_test_split_explicit(tst=tst)
             self._assert_indices(idx_trn, idx_tst)
 
-    def _assertions_for_folded_splits(self, idx_trn, idx_tst, N_FOLDS):
-        self.assertTrue(idx_trn.shape[0] == idx_tst.shape[0] == N_FOLDS)
-        for i in range(N_FOLDS):
-            self.assertTrue(idx_trn[i].ndim == idx_tst[i].ndim == 1)
-            self.assertFalse(bool(set(idx_trn[i]).intersection(idx_tst[i])))
-            self.assertAlmostEqual(
-                idx_trn[i].size,
-                (N_FOLDS - 1) / N_FOLDS * self.nsamples,
-                delta=0.02 * self.nsamples,
-            )
-            self.assertAlmostEqual(
-                idx_tst[i].size, 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
-            )
+    def test_explicit_split_folded(self):
+        n_splits = 5
+        folds = np.array_split(np.arange(self.nsamples), n_splits)
+        indices = np.arange(self.nsamples)
+        trn = np.array([
+            np.concatenate([indices[fold] for j, fold in enumerate(folds) if j != i], axis=0)
+            for i in range(n_splits)
+        ], dtype=object)
+        for dataset in [self.datasetY1dim, self.datasetY2dim]:
+            idx_trn, idx_tst = dataset.train_test_split_explicit(trn=trn)
+            self._assertions_for_folded_splits(idx_trn, idx_tst, n_splits)
 
     def test_folded_splits(self):
         N_FOLDS = 5
