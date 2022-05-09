@@ -17,6 +17,9 @@ class Explain:
     A general class to provide methods for providing pre-hoc and post-hoc explainability analysis.
     """
 
+    dataset: Dataset
+    """A `spectraxai.dataset.Dataset` object used to inspect and/or train the model"""
+
     def __init__(self, dataset: Dataset):
         """
         Parameters
@@ -33,7 +36,26 @@ class PreHocAnalysis(Explain):
     """
     A class to provide methods for providing pre-hoc explainability analysis.
     """
-    def correlogram(self, top: int = 5, method: str = "corr"):
+
+    def correlogram(self, top: int = 5, method: str = "corr") -> plt.Axes:
+        """Plot a correlogram between the most important input features and the output(s).
+
+        Parameters
+        ----------
+        top: `int`, optional
+            The number of most important features to consider. Defaults to 5.
+        method: `str`, optional
+            The method to calculate the feature importance. Acceptable values
+            are "corr" for Pearson's correlation and "mi" for mutual information.
+            Defaults to "corr".
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+        """
+        if method not in ["corr", "mi"]:
+            raise ValueError("Method may either be corr or mi")
         fig, axes = plt.subplots(
             self.dataset.n_outputs, top, figsize=(11.69 * 2, 8.27), squeeze=False
         )
@@ -60,10 +82,9 @@ class PreHocAnalysis(Explain):
         y_ranges: List,
         preprocesses: List[SpectralPreprocessing] = [],
         ylims: List = [],
-    ):
+    ) -> plt.Axes:
         """
         Creates a plot of the mean spectrum (across all samples) for each output range.
-        This expects that the dataset passed contains the reflectance spectra, as it also plots the CR spectra.
 
         Parameters
         ----------
@@ -73,11 +94,16 @@ class PreHocAnalysis(Explain):
 
         preprocesses: `List[spectraxai.spectra.SpectralPreprocessing]`, optional
             An optional list of preprocessing techniques to plot simultaneously on the same figure.
-            If ommited, it will only plot the spectra of the passed dataset.
+            If omitted, it will only plot the spectra of the passed dataset.
 
         ylims: List[List], optional
             An optional list of the ylim to use on each of the supplied preprocesses.
             If preprocesses was omitted this can be a list of length 1 to act on the dataset's spectra.
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
         """
         if len(y_ranges) != self.dataset.n_outputs:
             raise AssertionError(
@@ -159,6 +185,7 @@ class PostHocAnalysis(Explain):
     """
     A class to provide methods for providing post-hoc explainability analysis.
     """
+
     def bar_plot_importance(self, importance: List, ax: plt.Axes = None) -> plt.Axes:
         """Plots a bar plot of the feature importance
 
@@ -279,7 +306,7 @@ class PostHocAnalysis(Explain):
         imputer = sage.MarginalImputer(model, self.dataset.X)
 
         # Set up an estimator
-        estimator = sage.KernelEstimator(imputer, 'mse')
+        estimator = sage.KernelEstimator(imputer, "mse")
 
         # Calculate SAGE values
         return estimator(self.dataset.X, self.dataset.Y)
