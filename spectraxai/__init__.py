@@ -41,7 +41,7 @@ results = pls.train_and_test(
 from spectraxai.explain import PostHocAnalysis
 
 xai = PostHocAnalysis(dataset)
-xai.bar_plot_importance(results[0]["VIP"])
+xai.bar_plot_importance(results.iloc[0]["feature_importance"])
 ```
 '''
 

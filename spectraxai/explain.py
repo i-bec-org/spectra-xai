@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.ticker as ticker
+from sklearn.inspection import permutation_importance
 import pandas
 import seaborn
 import sage
@@ -31,6 +32,64 @@ class Explain:
         self.dataset = dataset
         plt.style.use("seaborn-whitegrid")
 
+    def _check_bar_array(self, array: np.ndarray):
+        if not array.size:
+            raise ValueError("The array containing the bar values cannot be empty")
+        if array.shape[0] != self.dataset.n_features:
+            raise ValueError(
+                "The number of bars should equal the number of input features"
+            )
+
+    def _bar_plot(
+        self,
+        height: np.ndarray,
+        yerr: np.ndarray = None,
+        ax: plt.Axes = None,
+        ylabel: str = "",
+    ) -> plt.Axes:
+        """Plots a bar plot of the feature importance
+
+        Parameters
+        ----------
+        height: `np.ndarray`
+            A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
+            containing the importance of each feature
+
+        yerr: `np.ndarray`
+            A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
+            containing the vertical errorbars to the bar tips
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        ylabel: str, optional
+            The label of the y axis
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+        """
+        if ax is None:
+            plt.figure(figsize=(11.69, 8.27), dpi=200)
+            ax = plt.gca()
+        self._check_bar_array(height)
+        if yerr is not None:
+            self._check_bar_array(yerr)
+        pos = np.arange(len(height))
+        ax.bar(pos, height, yerr=yerr)
+        ax.set_xticks(pos, self.dataset.X_names)
+        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins="auto"))
+        ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+        ax.grid(which="minor", linewidth=0.6, alpha=0.3)
+        ax.tick_params(direction="out", which="major", length=6, width=1)
+        ax.tick_params(direction="out", which="minor", length=3, width=1)
+        ax.set_xlabel("Wavelength")
+        ax.set_ylabel(ylabel)
+        return ax
+
 
 class PreHocAnalysis(Explain):
     """
@@ -44,6 +103,7 @@ class PreHocAnalysis(Explain):
         ----------
         top: `int`, optional
             The number of most important features to consider. Defaults to 5.
+
         method: `str`, optional
             The method to calculate the feature importance. Acceptable values
             are "corr" for Pearson's correlation and "mi" for mutual information.
@@ -57,7 +117,7 @@ class PreHocAnalysis(Explain):
         if method not in ["corr", "mi"]:
             raise ValueError("Method may either be corr or mi")
         fig, axes = plt.subplots(
-            self.dataset.n_outputs, top, figsize=(11.69 * 2, 8.27), squeeze=False
+            self.dataset.n_outputs, top, figsize=(11.69, 8.27), squeeze=False, dpi=200
         )
         metric = self.dataset.corr() if method == "corr" else self.dataset.mi()
         for i, corr in enumerate(metric):
@@ -65,7 +125,7 @@ class PreHocAnalysis(Explain):
             ind = ind[np.argsort(corr[ind])]
             for j in range(top):
                 x, y = self.dataset.X[:, ind[j]], self.dataset.Y[:, i]
-                axes[i, j].scatter(x=x, y=y)
+                axes[i, j].scatter(x=x, y=y, s=4)
                 y_lim = axes[i, j].get_ylim()
                 m, b = np.polyfit(x, y, 1)
                 axes[i, j].plot(x, m * x + b, c="k")
@@ -75,6 +135,44 @@ class PreHocAnalysis(Explain):
                     "Feature {0}".format(self.dataset.X_names[ind[j]])
                 )
                 axes[i, j].set_ylabel("Output {0}".format(self.dataset.Y_names[i]))
+        plt.tight_layout()
+        return axes
+
+    def bar_plot_corr(self, method: str = "corr"):
+        """Plot a bar plot depicting the correlation between the input features and the output(s).
+
+        Parameters
+        ----------
+        method: `str`, optional
+            The method to calculate the feature importance. Acceptable values
+            are "corr" for Pearson's correlation and "mi" for mutual information.
+            Defaults to "corr".
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+        """
+        if method not in ["corr", "mi"]:
+            raise ValueError("Method may either be corr or mi")
+        fig, axes = plt.subplots(
+            self.dataset.n_outputs,
+            1,
+            figsize=(11.69, 8.27),
+            squeeze=False,
+            sharex=True,
+            sharey=True,
+            dpi=200,
+        )
+        metric = self.dataset.corr() if method == "corr" else self.dataset.mi()
+        for i, corr in enumerate(metric):
+            ylabel = (
+                "Pearson's correlation" if method == "corr" else "Mutual information"
+            )
+            self._bar_plot(height=corr, ax=axes[i, 0], ylabel=ylabel)
+            axes[i, 0].set_title(self.dataset.Y_names[i])
+            if i + 1 < self.dataset.n_outputs:
+                axes[i, 0].set_xlabel("")
         return axes
 
     def mean_spectrum_by_range(
@@ -186,46 +284,42 @@ class PostHocAnalysis(Explain):
     A class to provide methods for providing post-hoc explainability analysis.
     """
 
-    def bar_plot_importance(self, importance: List, ax: plt.Axes = None) -> plt.Axes:
+    def bar_plot_importance(
+        self, importance: np.ndarray, ax: plt.Axes = None
+    ) -> plt.Axes:
         """Plots a bar plot of the feature importance
 
         Parameters
         ----------
-        importance: `List`
-            A list containing the importance of each feature
+        importance: `np.ndarray`
+            A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
+            containing the importance of each feature
 
         ax: `plt.Axes`, optional
-            An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+            An optional matplotlib axes to plot into. Defaults to None,
+            in which case a new figure is created.
 
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
         """
-        if ax is None:
-            plt.figure()
-            ax = plt.gca()
-        pos = np.arange(len(importance))
-        ax.bar(pos, importance)
-        ax.set_xticks(pos, self.dataset.X_names)
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins="auto"))
-        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
-        ax.set_xlabel("Wavelength")
-        ax.set_ylabel("Importance")
-        return ax
+        return self._bar_plot(height=importance, ax=None, ylabel="Importance")
 
     def circular_bar_plot_importance(
-        self, importance: List, ax: plt.Axes = None
+        self, importance: np.ndarray, ax: plt.Axes = None, top: int = None
     ) -> plt.Axes:
         """Plots a circular (spiral) bar plot of the feature importance
 
         Parameters
         ----------
-        importance: `List`
-            A list containing the importance of each feature
+        importance: `np.ndarray`
+            A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
+            containing the importance of each feature
 
         ax: `plt.Axes
-            An optional matplotlib axes to plot into. Defaults to None, in which case a new figure is created.
+            An optional matplotlib axes to plot into. Defaults to None,
+            in which case a new figure is created.
 
         Returns
         -------
@@ -236,11 +330,16 @@ class PostHocAnalysis(Explain):
             plt.figure(figsize=(20, 10))
             ax = plt.subplot(111, polar=True)
             plt.axis("off")
+        self._check_bar_array(importance)
         # Build a dataset
         df = pandas.DataFrame({"Name": self.dataset.X_names, "Value": importance})
 
         # Reorder the dataframe
         df = df.sort_values(by=["Value"])
+
+        # Keep only these values
+        if top is not None:
+            df = df.iloc[-top:]
 
         # Constants = parameters controling the plot layout:
         upperLimit = 100
@@ -299,6 +398,41 @@ class PostHocAnalysis(Explain):
                 rotation_mode="anchor",
             )
 
+        return ax
+
+    def bar_plot_permutation_importance(
+        self, model, dataset: Dataset = None, ax: plt.axes = None
+    ):
+        """Create a bar plot using ermutation feature importance
+
+        Parameters
+        ----------
+        model: object
+            The estimator that has already been fitted
+
+        dataset: `spectraxai.dataset.Dataset`, optional
+            An optional dataset to calculate the scoring, which can be a hold-out set
+            different from the training data used to train the estimator. If this is
+            not supplied, `dataset` will be used instead.
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+
+        """
+        if dataset is None:
+            dataset = self.dataset
+        result = permutation_importance(
+            model, dataset.X, dataset.Y, n_repeats=10, n_jobs=-1
+        )
+        ax = self._bar_plot(height=result.importances_mean, yerr=result.importances_std)
+        ax.set_title("Feature importances using permutation")
+        ax.set_ylabel("Mean decrease in impurity")
         return ax
 
     def sage_importance(self, model):
