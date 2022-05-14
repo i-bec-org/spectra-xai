@@ -71,7 +71,7 @@ class _Explain:
             A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
             containing the importance of each feature
 
-        yerr: `np.ndarray`
+        yerr: `np.ndarray`, optional
             A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
             containing the vertical errorbars to the bar tips
 
