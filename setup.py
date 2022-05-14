@@ -41,4 +41,5 @@ setup(
             "pdoc",
         ]
     },
+    include_package_data=True,
 )
