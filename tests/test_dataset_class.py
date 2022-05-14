@@ -1,4 +1,3 @@
-from ast import Assert
 import unittest
 from .context import spectraxai
 from spectraxai.dataset import Dataset, DatasetSplit, Scale
@@ -196,24 +195,6 @@ class TestDatasetClass(unittest.TestCase):
                 idx_tst,
                 N_FOLDS,
             )
-
-    def test_calculate_corr(self):
-        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
-            corr = dataset.corr()
-            self.assertTrue(corr.shape[0] == dataset.Y.shape[1])
-            self.assertTrue(corr.shape[1] == self.nfeatures)
-
-    def test_calculate_mi(self):
-        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
-            mi = dataset.mi()
-            self.assertTrue(mi.shape[0] == dataset.Y.shape[1])
-            self.assertTrue(mi.shape[1] == self.nfeatures)
-
-    def test_calculate_f_statistic(self):
-        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
-            f = dataset.f_statistic()
-            self.assertTrue(f.shape[0] == dataset.Y.shape[1])
-            self.assertTrue(f.shape[1] == self.nfeatures)
 
     def test_get_matrix_3D(self):
         methods = [
