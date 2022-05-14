@@ -6,7 +6,6 @@ import pandas
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.feature_selection import mutual_info_regression
 from sklearn.utils.validation import check_X_y
 
 import spectraxai.utils.kennardStone as kennardStone
@@ -229,13 +228,17 @@ class Dataset:
         if tst.size > 0 and trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
         if tst.size > 0 and isinstance(tst[0], np.ndarray):
-            trn = np.array([self.train_test_split_explicit(tst=fold)[0] for fold in tst])
+            trn = np.array(
+                [self.train_test_split_explicit(tst=fold)[0] for fold in tst]
+            )
         elif tst.size > 0:
             if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
             trn = np.array(list(set(range(0, self.n_samples)).difference(set(tst))))
         elif trn.size > 0 and isinstance(trn[0], np.ndarray):
-            tst = np.array([self.train_test_split_explicit(trn=fold)[1] for fold in trn])
+            tst = np.array(
+                [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
+            )
         else:
             if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
@@ -285,42 +288,6 @@ class Dataset:
             thisX = np.copy(self.X)
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
-
-    def corr(self) -> List:
-        """
-        Calculate Pearson's correlation between all input features and the outputs
-
-        Returns
-        ------
-        `np.ndarray`
-            A 2-D np.array containing the correlation for each output property of size (`n_outputs`, `n_features`)
-        """
-        return np.array(
-            [
-                [
-                    np.corrcoef(self.X[:, i], self.Y[:, j])[0][1]
-                    for i in range(self.n_features)
-                ]
-                for j in range(self.n_outputs)
-            ]
-        )
-
-    def mi(self) -> List:
-        """
-        Calculate the mutual information between all input features and the outputs
-
-        Returns
-        ------
-        `np.ndarray`
-            A 2-D np.array containing the mutual information for each output property of size (`n_outputs`, `n_features`)
-        """
-        normalize = lambda a: a / np.max(a)
-        return np.array(
-            [
-                normalize(mutual_info_regression(self.X, self.Y[:, j]))
-                for j in range(self.n_outputs)
-            ]
-        )
 
     def apply_unscale_X(
         self,

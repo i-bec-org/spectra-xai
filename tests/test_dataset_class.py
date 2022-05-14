@@ -118,12 +118,12 @@ class TestDatasetClass(unittest.TestCase):
         self.assertRaises(
             AssertionError,
             self.datasetY1dim.train_test_split_explicit,
-            tst=np.array([-1, 0])
+            tst=np.array([-1, 0]),
         )
         self.assertRaises(
             AssertionError,
             self.datasetY1dim.train_test_split_explicit,
-            trn=np.array([0, 1, 100000])
+            trn=np.array([0, 1, 100000]),
         )
 
     def test_random_split(self):
@@ -162,10 +162,15 @@ class TestDatasetClass(unittest.TestCase):
         n_splits = 5
         folds = np.array_split(np.arange(self.nsamples), n_splits)
         indices = np.arange(self.nsamples)
-        trn = np.array([
-            np.concatenate([indices[fold] for j, fold in enumerate(folds) if j != i], axis=0)
-            for i in range(n_splits)
-        ], dtype=object)
+        trn = np.array(
+            [
+                np.concatenate(
+                    [indices[fold] for j, fold in enumerate(folds) if j != i], axis=0
+                )
+                for i in range(n_splits)
+            ],
+            dtype=object,
+        )
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
             idx_trn, idx_tst = dataset.train_test_split_explicit(trn=trn)
             self._assertions_for_folded_splits(idx_trn, idx_tst, n_splits)
@@ -203,6 +208,12 @@ class TestDatasetClass(unittest.TestCase):
             mi = dataset.mi()
             self.assertTrue(mi.shape[0] == dataset.Y.shape[1])
             self.assertTrue(mi.shape[1] == self.nfeatures)
+
+    def test_calculate_f_statistic(self):
+        for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
+            f = dataset.f_statistic()
+            self.assertTrue(f.shape[0] == dataset.Y.shape[1])
+            self.assertTrue(f.shape[1] == self.nfeatures)
 
     def test_get_matrix_3D(self):
         methods = [
