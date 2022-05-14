@@ -229,13 +229,17 @@ class Dataset:
         if tst.size > 0 and trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
         if tst.size > 0 and isinstance(tst[0], np.ndarray):
-            trn = np.array([self.train_test_split_explicit(tst=fold)[0] for fold in tst])
+            trn = np.array(
+                [self.train_test_split_explicit(tst=fold)[0] for fold in tst]
+            )
         elif tst.size > 0:
             if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
             trn = np.array(list(set(range(0, self.n_samples)).difference(set(tst))))
         elif trn.size > 0 and isinstance(trn[0], np.ndarray):
-            tst = np.array([self.train_test_split_explicit(trn=fold)[1] for fold in trn])
+            tst = np.array(
+                [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
+            )
         else:
             if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
