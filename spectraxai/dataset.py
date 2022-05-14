@@ -6,7 +6,7 @@ import pandas
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.feature_selection import mutual_info_regression
+from sklearn.feature_selection import mutual_info_regression, f_regression
 from sklearn.utils.validation import check_X_y
 
 import spectraxai.utils.kennardStone as kennardStone
@@ -322,6 +322,23 @@ class Dataset:
         return np.array(
             [
                 normalize(mutual_info_regression(self.X, self.Y[:, j]))
+                for j in range(self.n_outputs)
+            ]
+        )
+
+    def f_statistic(self) -> np.ndarray:
+        """
+        Univariate linear regression tests returning F-statistic between all input features and the outputs
+
+        Returns
+        ------
+        `np.ndarray`
+            A 2-D np.array containing the F-statistic for each output property of size (`n_outputs`, `n_features`)
+        """
+        normalize = lambda a: a / np.max(a)
+        return np.array(
+            [
+                normalize(f_regression(self.X, self.Y[:, j])[0])
                 for j in range(self.n_outputs)
             ]
         )
