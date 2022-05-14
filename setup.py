@@ -16,7 +16,9 @@ with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
 setup(
     name="spectraxai",
     version="0.3.0",
-    packages=find_packages(include=["spectraxai", "spectraxai.utils"]),
+    packages=find_packages(
+        include=["spectraxai", "spectraxai.utils", "spectraxai.data"]
+    ),
     python_requires=">=3.6",
     install_requires=[
         "pandas",
@@ -26,7 +28,7 @@ setup(
         "matplotlib",
         "cubist",
         "seaborn",
-        "sage-importance"
+        "sage-importance",
     ],
     extras_require={
         "dev": [
