@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List
 
 import numpy as np
@@ -5,12 +6,27 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.ticker as ticker
 from sklearn.inspection import permutation_importance
+from sklearn.feature_selection import mutual_info_regression, f_regression
 import pandas
 import seaborn
 import sage
 
 from spectraxai.dataset import Dataset
 from spectraxai.spectra import SpectralPreprocessing
+
+
+class FeatureRanking(str, Enum):
+    """Types of methods for calculating feature ranking"""
+
+    CORR = "Pearson's correlation"
+    MI = "Mutual information"
+    F_STATISTIC = "F-statistic"
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.name
 
 
 class Explain:
@@ -96,7 +112,89 @@ class PreHocAnalysis(Explain):
     A class to provide methods for providing pre-hoc explainability analysis.
     """
 
-    def correlogram(self, top: int = 5, method: str = "corr") -> plt.Axes:
+    def _corr(self) -> np.ndarray:
+        """
+        Calculate Pearson's correlation between all input features and the outputs
+
+        Returns
+        ------
+        `np.ndarray`
+            A 2-D np.array containing the correlation for each output property of size (`n_outputs`, `n_features`)
+        """
+        return np.array(
+            [
+                [
+                    np.corrcoef(self.dataset.X[:, i], self.dataset.Y[:, j])[0][1]
+                    for i in range(self.dataset.n_features)
+                ]
+                for j in range(self.dataset.n_outputs)
+            ]
+        )
+
+    def _mi(self) -> np.ndarray:
+        """
+        Calculate the mutual information between all input features and the outputs
+
+        Returns
+        ------
+        `np.ndarray`
+            A 2-D np.array containing the mutual information for each output property of size (`n_outputs`, `n_features`)
+        """
+        normalize = lambda a: a / np.max(a)
+        return np.array(
+            [
+                normalize(mutual_info_regression(self.dataset.X, self.dataset.Y[:, j]))
+                for j in range(self.dataset.n_outputs)
+            ]
+        )
+
+    def _f_statistic(self) -> np.ndarray:
+        """
+        Univariate linear regression tests returning F-statistic between all input features and the outputs
+
+        Returns
+        ------
+        `np.ndarray`
+            A 2-D np.array containing the F-statistic for each output property of size (`n_outputs`, `n_features`)
+        """
+        normalize = lambda a: a / np.max(a)
+        return np.array(
+            [
+                normalize(f_regression(self.dataset.X, self.dataset.Y[:, j])[0])
+                for j in range(self.dataset.n_outputs)
+            ]
+        )
+
+    def feature_importance(self, method: FeatureRanking) -> np.ndarray:
+        """Calculate the feature importance between the input features and the output(s).
+
+        Parameters
+        ----------
+
+        method: `FeatureRanking`
+            The method to calculate the feature importance.
+
+        Returns
+        -------
+        `np.ndarray`
+            The feature importance according to the selected method
+        """
+        if not isinstance(method, FeatureRanking):
+            raise ValueError(
+                "Method must be one of the types defined in FeatureRanking"
+            )
+        if method == FeatureRanking.CORR:
+            return self._corr()
+        elif method == FeatureRanking.MI:
+            return self._mi()
+        elif method == FeatureRanking.F_STATISTIC:
+            return self._f_statistic()
+        else:
+            raise NotImplementedError("This type is not yet supported")
+
+    def correlogram(
+        self, top: int = 5, method: FeatureRanking = FeatureRanking.CORR
+    ) -> plt.Axes:
         """Plot a correlogram between the most important input features and the output(s).
 
         Parameters
@@ -104,22 +202,18 @@ class PreHocAnalysis(Explain):
         top: `int`, optional
             The number of most important features to consider. Defaults to 5.
 
-        method: `str`, optional
-            The method to calculate the feature importance. Acceptable values
-            are "corr" for Pearson's correlation and "mi" for mutual information.
-            Defaults to "corr".
+        method: `FeatureRanking`, optional
+            The method to calculate the feature importance. Defaults to Pearson's correlation.
 
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
         """
-        if method not in ["corr", "mi"]:
-            raise ValueError("Method may either be corr or mi")
+        metric = self.feature_importance(method)
         fig, axes = plt.subplots(
             self.dataset.n_outputs, top, figsize=(11.69, 8.27), squeeze=False, dpi=200
         )
-        metric = self.dataset.corr() if method == "corr" else self.dataset.mi()
         for i, corr in enumerate(metric):
             ind = np.argpartition(np.abs(corr), -top)[-top:]
             ind = ind[np.argsort(corr[ind])]
@@ -130,7 +224,7 @@ class PreHocAnalysis(Explain):
                 m, b = np.polyfit(x, y, 1)
                 axes[i, j].plot(x, m * x + b, c="k")
                 axes[i, j].set_ylim(y_lim)
-                axes[i, j].set_title("Correlation {0:.2f}".format(corr[ind[j]]))
+                axes[i, j].set_title("{0} {1:.2f}".format(method, corr[ind[j]]))
                 axes[i, j].set_xlabel(
                     "Feature {0}".format(self.dataset.X_names[ind[j]])
                 )
@@ -138,23 +232,20 @@ class PreHocAnalysis(Explain):
         plt.tight_layout()
         return axes
 
-    def bar_plot_corr(self, method: str = "corr"):
+    def bar_plot_corr(self, method: FeatureRanking = FeatureRanking.CORR):
         """Plot a bar plot depicting the correlation between the input features and the output(s).
 
         Parameters
         ----------
-        method: `str`, optional
-            The method to calculate the feature importance. Acceptable values
-            are "corr" for Pearson's correlation and "mi" for mutual information.
-            Defaults to "corr".
+        method: `FeatureRanking`, optional
+            The method to calculate the feature importance. Defaults to Pearson's correlation.
 
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
         """
-        if method not in ["corr", "mi"]:
-            raise ValueError("Method may either be corr or mi")
+        metric = self.feature_importance(method)
         fig, axes = plt.subplots(
             self.dataset.n_outputs,
             1,
@@ -164,12 +255,8 @@ class PreHocAnalysis(Explain):
             sharey=True,
             dpi=200,
         )
-        metric = self.dataset.corr() if method == "corr" else self.dataset.mi()
         for i, corr in enumerate(metric):
-            ylabel = (
-                "Pearson's correlation" if method == "corr" else "Mutual information"
-            )
-            self._bar_plot(height=corr, ax=axes[i, 0], ylabel=ylabel)
+            self._bar_plot(height=corr, ax=axes[i, 0], ylabel=method)
             axes[i, 0].set_title(self.dataset.Y_names[i])
             if i + 1 < self.dataset.n_outputs:
                 axes[i, 0].set_xlabel("")
