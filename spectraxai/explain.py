@@ -232,7 +232,7 @@ class PreHocAnalysis(Explain):
         plt.tight_layout()
         return axes
 
-    def bar_plot_corr(self, method: FeatureRanking = FeatureRanking.CORR):
+    def bar_plot_importance(self, method: FeatureRanking = FeatureRanking.CORR):
         """Plot a bar plot depicting the correlation between the input features and the output(s).
 
         Parameters
