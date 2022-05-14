@@ -63,7 +63,7 @@ pytest --ignore=examples --doctest-modules --html=report.html --cov=. --cov-repo
 Documentation may be generated via:
 
 ```
-pdoc --docformat numpy -o docs spectraxai
+pdoc --docformat numpy --math -o docs spectraxai
 ```
 
 ## Examples

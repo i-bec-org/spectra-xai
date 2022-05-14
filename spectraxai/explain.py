@@ -56,6 +56,16 @@ class _Explain:
                 "The number of bars should equal the number of input features"
             )
 
+    def _stylize_plot(self, ax) -> plt.Axes:
+        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins="auto"))
+        ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+        ax.grid(which="minor", linewidth=0.6, alpha=0.3)
+        ax.tick_params(direction="out", which="major", length=6, width=1)
+        ax.tick_params(direction="out", which="minor", length=3, width=1)
+        ax.set_xlabel("Wavelength")
+        return ax
+
     def _bar_plot(
         self,
         height: np.ndarray,
@@ -96,13 +106,7 @@ class _Explain:
         pos = np.arange(len(height))
         ax.bar(pos, height, yerr=yerr)
         ax.set_xticks(pos, self.dataset.X_names)
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins="auto"))
-        ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
-        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
-        ax.grid(which="minor", linewidth=0.6, alpha=0.3)
-        ax.tick_params(direction="out", which="major", length=6, width=1)
-        ax.tick_params(direction="out", which="minor", length=3, width=1)
-        ax.set_xlabel("Wavelength")
+        ax = self._stylize_plot(ax)
         ax.set_ylabel(ylabel)
         return ax
 
@@ -265,6 +269,36 @@ class PreHocAnalysis(_Explain):
                 axes[i, 0].set_xlabel("")
         return axes
 
+    def mean_spectrum(self, ax=None) -> plt.Axes:
+        """Plot mean spectrum :math:`\pm` sd of the dataset.
+
+        Parameters
+        ----------
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None,
+            in which case a new figure is created.
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+        """
+        if ax is None:
+            plt.figure(figsize=(11.69, 8.27), dpi=200)
+            ax = plt.gca()
+
+        df = pandas.DataFrame(data=self.dataset.X, columns=self.dataset.X_names)
+
+        ax = seaborn.lineplot(
+            data=pandas.melt(df, var_name="Wavelength"),
+            x="Wavelength",
+            y="value",
+            n_boot=200,
+            ci="sd",
+            ax=ax,
+        )
+        return self._stylize_plot(ax)
+
     def mean_spectrum_by_range(
         self,
         y_ranges: List,
@@ -348,15 +382,7 @@ class PreHocAnalysis(_Explain):
                 if ylims:
                     plot_ax.set_ylim(ylims[j])
 
-            ax.set_xlabel("Wavelength")
-
-            ax.xaxis.set_major_locator(ticker.AutoLocator())
-            ax.xaxis.set_minor_locator(ticker.AutoMinorLocator())
-            ax.grid(True, which="major", linewidth=1.0, alpha=0.5)
-            ax.grid(True, which="minor", linewidth=0.6, alpha=0.3)
-
-            ax.tick_params(direction="out", which="major", length=6, width=1)
-            ax.tick_params(direction="out", which="minor", length=3, width=1)
+            ax = self._stylize_plot(ax)
 
             plot_ax.legend(
                 groupedPerProp.index,
