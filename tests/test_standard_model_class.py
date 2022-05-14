@@ -1,12 +1,10 @@
-from multiprocessing.sharedctypes import Value
 import unittest
-import os
-import pandas
 import numpy as np
-from .context import spectraxai, DATA_FOLDER
+from .context import spectraxai
 from spectraxai.models import Model, StandardModel
 from spectraxai.spectra import SpectralPreprocessing
-from spectraxai.dataset import Dataset, DatasetSplit
+from spectraxai.dataset import DatasetSplit
+from spectraxai.utils.datasets import load_GR_SSL
 
 
 class TestStandardModelClass(unittest.TestCase):
@@ -69,11 +67,11 @@ class TestStandardModelClass(unittest.TestCase):
                 SpectralPreprocessing.SNV,
             ],
         ]
-        df = pandas.read_csv(os.path.join(DATA_FOLDER, "SSL_GR.csv"))
-        X = df.loc[:, "350":"2500":20]
-        self.dataset1D = Dataset(X, df.OM)
-        self.dataset2D = Dataset(X, df.loc[:, ["OM", "Sand_Fraction"]])
-        self.idx_trn, self.idx_tst = np.arange(200), np.arange(200, X.shape[0])
+        self.dataset1D = load_GR_SSL()
+        self.dataset2D = load_GR_SSL(properties=["OM", "Sand_Fraction"])
+        self.idx_trn, self.idx_tst = np.arange(200), np.arange(
+            200, self.dataset1D.n_samples
+        )
 
     def test_wrong_params_model_constructor(self):
         self.assertRaises(
@@ -136,9 +134,7 @@ class TestStandardModelClass(unittest.TestCase):
                 idx_tst=self.idx_tst,
             )
             # No list of sequences given
-            self.assertRaises(
-                ValueError, model.train_and_test_multiple, self.dataset1D
-            )
+            self.assertRaises(ValueError, model.train_and_test_multiple, self.dataset1D)
             self.assertRaises(
                 ValueError,
                 model.train_and_test_multiple,
@@ -211,18 +207,10 @@ class TestStandardModelClass(unittest.TestCase):
                 DatasetSplit.CROSS_VALIDATION, 3
             )
             for trn, tst in [(self.idx_trn, self.idx_tst), (idx_trn, idx_tst)]:
-                model.train_and_test_multiple(
-                    self.dataset1D, self.methods, idx_trn=trn
-                )
-                model.train_and_test_multiple(
-                    self.dataset1D, self.methods, idx_tst=tst
-                )
-                model.train_and_test_multiple(
-                    self.dataset2D, self.methods, idx_trn=trn
-                )
-                model.train_and_test_multiple(
-                    self.dataset2D, self.methods, idx_tst=tst
-                )
+                model.train_and_test_multiple(self.dataset1D, self.methods, idx_trn=trn)
+                model.train_and_test_multiple(self.dataset1D, self.methods, idx_tst=tst)
+                model.train_and_test_multiple(self.dataset2D, self.methods, idx_trn=trn)
+                model.train_and_test_multiple(self.dataset2D, self.methods, idx_tst=tst)
 
 
 if __name__ == "__main__":
