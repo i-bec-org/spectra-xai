@@ -23,13 +23,13 @@ class FeatureRanking(str, Enum):
     F_STATISTIC = "F-statistic"
 
     def __str__(self):
-        return self.value
-
-    def __repr__(self):
         return self.name
 
+    def __repr__(self):
+        return self.value
 
-class Explain:
+
+class _Explain:
     """
     A general class to provide methods for providing pre-hoc and post-hoc explainability analysis.
     """
@@ -107,7 +107,7 @@ class Explain:
         return ax
 
 
-class PreHocAnalysis(Explain):
+class PreHocAnalysis(_Explain):
     """
     A class to provide methods for providing pre-hoc explainability analysis.
     """
@@ -177,7 +177,10 @@ class PreHocAnalysis(Explain):
         Returns
         -------
         `np.ndarray`
-            The feature importance according to the selected method
+            The feature importance according to the selected method, which is a 2-D np.array
+            containing the ranking for each output property of size
+            (`spectraxai.dataset.Dataset.n_outputs`, `spectraxai.dataset.Dataset.n_features`)
+
         """
         if not isinstance(method, FeatureRanking):
             raise ValueError(
@@ -203,7 +206,7 @@ class PreHocAnalysis(Explain):
             The number of most important features to consider. Defaults to 5.
 
         method: `FeatureRanking`, optional
-            The method to calculate the feature importance. Defaults to Pearson's correlation.
+            The method to calculate the feature importance. Defaults to FeatureRanking.CORR.
 
         Returns
         -------
@@ -224,7 +227,7 @@ class PreHocAnalysis(Explain):
                 m, b = np.polyfit(x, y, 1)
                 axes[i, j].plot(x, m * x + b, c="k")
                 axes[i, j].set_ylim(y_lim)
-                axes[i, j].set_title("{0} {1:.2f}".format(method, corr[ind[j]]))
+                axes[i, j].set_title("{0} {1:.2f}".format(method.value, corr[ind[j]]))
                 axes[i, j].set_xlabel(
                     "Feature {0}".format(self.dataset.X_names[ind[j]])
                 )
@@ -233,12 +236,12 @@ class PreHocAnalysis(Explain):
         return axes
 
     def bar_plot_importance(self, method: FeatureRanking = FeatureRanking.CORR):
-        """Plot a bar plot depicting the correlation between the input features and the output(s).
+        """Plot a bar plot depicting the feature ranking between the input features and the output(s).
 
         Parameters
         ----------
         method: `FeatureRanking`, optional
-            The method to calculate the feature importance. Defaults to Pearson's correlation.
+            The method to calculate the feature importance. Defaults to FeatureRanking.CORR.
 
         Returns
         -------
@@ -256,7 +259,7 @@ class PreHocAnalysis(Explain):
             dpi=200,
         )
         for i, corr in enumerate(metric):
-            self._bar_plot(height=corr, ax=axes[i, 0], ylabel=method)
+            self._bar_plot(height=corr, ax=axes[i, 0], ylabel=method.value)
             axes[i, 0].set_title(self.dataset.Y_names[i])
             if i + 1 < self.dataset.n_outputs:
                 axes[i, 0].set_xlabel("")
@@ -366,7 +369,7 @@ class PreHocAnalysis(Explain):
         return axes
 
 
-class PostHocAnalysis(Explain):
+class PostHocAnalysis(_Explain):
     """
     A class to provide methods for providing post-hoc explainability analysis.
     """
