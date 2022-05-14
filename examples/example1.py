@@ -9,7 +9,8 @@ from spectraxai.models import Model, StandardModel
 
 DATA_FOLDER = "spectraxai.data"
 
-df = pandas.read_csv(resources.path(DATA_FOLDER, "SSL_GR.csv"))
+with resources.path(DATA_FOLDER, "SSL_GR.csv") as p:
+    df = pandas.read_csv(p)
 dataset = Dataset(df.loc[:, "350":"2500":20], df.OM)
 idx_trn, idx_tst = dataset.train_test_split(DatasetSplit.CROSS_VALIDATION, 5)
 

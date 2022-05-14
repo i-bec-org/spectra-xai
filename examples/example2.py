@@ -9,9 +9,12 @@ from spectraxai.models import Model, StandardModel
 
 DATA_FOLDER = "spectraxai.data"
 
-df = pandas.read_csv(resources.path(DATA_FOLDER, "SSL_GR.csv"))
+with resources.path(DATA_FOLDER, "SSL_GR.csv") as p:
+    df = pandas.read_csv(p)
 dataset = Dataset(df.loc[:, "350":"2500":20], df.OM)
 
 idx_trn, _ = dataset.train_test_split(DatasetSplit.RANDOM, 0.8)
-res = StandardModel(Model.PLS).train_and_test(dataset, SpectralPreprocessing.ABS, idx_trn=idx_trn)
+res = StandardModel(Model.PLS).train_and_test(
+    dataset, SpectralPreprocessing.ABS, idx_trn=idx_trn
+)
 print(res)
