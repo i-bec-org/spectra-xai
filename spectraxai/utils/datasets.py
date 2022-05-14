@@ -1,16 +1,14 @@
-import os
+from importlib import resources
 
 import pandas
 
 from ..dataset import Dataset
 
-DATA_FOLDER = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "data")
-)
+DATA_FOLDER = "spectraxai.data"
 
 
 def load_GR_SSL(subsampling=20, properties=["OM"]):
-    df = pandas.read_csv(os.path.join(DATA_FOLDER, "SSL_GR.csv"))
+    df = pandas.read_csv(resources.path(DATA_FOLDER, "SSL_GR.csv"))
     return Dataset(
         X=df.loc[:, "350":"2500":subsampling],
         Y=df.loc[:, properties],
