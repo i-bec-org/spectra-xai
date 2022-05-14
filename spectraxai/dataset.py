@@ -286,7 +286,7 @@ class Dataset:
             X[:, :, i] = self.__preprocess(thisX, method)
         return X
 
-    def corr(self) -> List:
+    def corr(self) -> np.ndarray:
         """
         Calculate Pearson's correlation between all input features and the outputs
 
@@ -305,7 +305,7 @@ class Dataset:
             ]
         )
 
-    def mi(self) -> List:
+    def mi(self) -> np.ndarray:
         """
         Calculate the mutual information between all input features and the outputs
 
