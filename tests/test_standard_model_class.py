@@ -1,10 +1,9 @@
 import unittest
 import numpy as np
-from .context import spectraxai
 from spectraxai.models import Model, StandardModel
 from spectraxai.spectra import SpectralPreprocessing
 from spectraxai.dataset import DatasetSplit
-from spectraxai.utils.datasets import load_GR_SSL
+from spectraxai.data import load_GR_SSL
 
 
 class TestStandardModelClass(unittest.TestCase):
@@ -69,8 +68,9 @@ class TestStandardModelClass(unittest.TestCase):
         ]
         self.dataset1D = load_GR_SSL()
         self.dataset2D = load_GR_SSL(properties=["OM", "Sand_Fraction"])
-        self.idx_trn, self.idx_tst = np.arange(200), np.arange(
-            200, self.dataset1D.n_samples
+        self.idx_trn, self.idx_tst = (
+            np.arange(200),
+            np.arange(200, self.dataset1D.n_samples),
         )
 
     def test_wrong_params_model_constructor(self):

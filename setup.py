@@ -19,7 +19,7 @@ setup(
     packages=find_packages(
         include=["spectraxai", "spectraxai.utils", "spectraxai.data"]
     ),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
         "pandas",
         "numpy",
@@ -29,6 +29,7 @@ setup(
         "cubist",
         "seaborn",
         "sage-importance",
+        "kennard-stone",
     ],
     extras_require={
         "dev": [
@@ -39,6 +40,9 @@ setup(
             "black",
             "ipykernel",
             "pdoc",
+            "docformatter",
+            "pydocstyle",
+            "pre-commit",
         ]
     },
     include_package_data=True,

@@ -1,3 +1,12 @@
+"""The module `spectraxai.explain` supports the interpretability analysis.
+
+This module defines the class `PreHocAnalysis` to operate only on a given
+`spectraxai.dataset.Dataset` and generate some insights solely from the data, as
+well as a `PostHocAnalysis` to operate on a `spectraxai.models.StandardModel`
+which has been trained on a given `spectraxai.dataset.Dataset`.
+
+"""
+
 from enum import Enum
 from typing import List
 
@@ -16,7 +25,7 @@ from spectraxai.spectra import SpectralPreprocessing
 
 
 class FeatureRanking(str, Enum):
-    """Types of methods for calculating feature ranking"""
+    """Types of methods for calculating feature ranking."""
 
     CORR = "Pearson's correlation"
     MI = "Mutual information"
@@ -30,20 +39,19 @@ class FeatureRanking(str, Enum):
 
 
 class _Explain:
-    """
-    A general class to provide methods for providing pre-hoc and post-hoc explainability analysis.
-    """
+    """A general class for providing pre-hoc and post-hoc explainability analysis."""
 
     dataset: Dataset
     """A `spectraxai.dataset.Dataset` object used to inspect and/or train the model"""
 
     def __init__(self, dataset: Dataset):
-        """
+        """Initialize using a dataset.
+
         Parameters
         ----------
-
         dataset: `spectraxai.dataset.Dataset`
             The dataset to inspect and/or used to train the model
+
         """
         self.dataset = dataset
         plt.style.use("seaborn-whitegrid")
@@ -73,7 +81,7 @@ class _Explain:
         ax: plt.Axes = None,
         ylabel: str = "",
     ) -> plt.Axes:
-        """Plots a bar plot of the feature importance
+        """Plot a bar plot of the feature importance.
 
         Parameters
         ----------
@@ -96,6 +104,7 @@ class _Explain:
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         if ax is None:
             plt.figure(figsize=(11.69, 8.27), dpi=200)
@@ -112,18 +121,18 @@ class _Explain:
 
 
 class PreHocAnalysis(_Explain):
-    """
-    A class to provide methods for providing pre-hoc explainability analysis.
-    """
+    """A class to provide methods for pre-hoc explainability analysis."""
 
     def _corr(self) -> np.ndarray:
-        """
-        Calculate Pearson's correlation between all input features and the outputs
+        """Calculate Pearson's correlation between input features and output(s).
 
         Returns
-        ------
+        -------
         `np.ndarray`
-            A 2-D np.array containing the correlation for each output property of size (`n_outputs`, `n_features`)
+            A 2-D np.array containing the correlation for each output property of size
+            (`spectraxai.dataset.Dataset.n_outputs`,
+            `spectraxai.dataset.Dataset.n_features`)
+
         """
         return np.array(
             [
@@ -136,13 +145,15 @@ class PreHocAnalysis(_Explain):
         )
 
     def _mi(self) -> np.ndarray:
-        """
-        Calculate the mutual information between all input features and the outputs
+        """Calculate the mutual information between all inputs and the output(s).
 
         Returns
-        ------
+        -------
         `np.ndarray`
-            A 2-D np.array containing the mutual information for each output property of size (`n_outputs`, `n_features`)
+            A 2-D np.array containing the mutual information for each output property
+            of size (`spectraxai.dataset.Dataset.n_outputs`,
+            `spectraxai.dataset.Dataset.n_features`)
+
         """
         normalize = lambda a: a / np.max(a)
         return np.array(
@@ -153,13 +164,18 @@ class PreHocAnalysis(_Explain):
         )
 
     def _f_statistic(self) -> np.ndarray:
-        """
-        Univariate linear regression tests returning F-statistic between all input features and the outputs
+        """Calculate F-statistic in the `dataset`.
+
+        Performs univariate linear regression tests returning F-statistic between all
+        input features and the output(s).
 
         Returns
-        ------
+        -------
         `np.ndarray`
-            A 2-D np.array containing the F-statistic for each output property of size (`n_outputs`, `n_features`)
+            A 2-D np.array containing the F-statistic for each output property of size
+            (`spectraxai.dataset.Dataset.n_outputs`,
+            `spectraxai.dataset.Dataset.n_features`)
+
         """
         normalize = lambda a: a / np.max(a)
         return np.array(
@@ -170,20 +186,20 @@ class PreHocAnalysis(_Explain):
         )
 
     def feature_importance(self, method: FeatureRanking) -> np.ndarray:
-        """Calculate the feature importance between the input features and the output(s).
+        """Calculate feature importance between the input features and the output(s).
 
         Parameters
         ----------
-
         method: `FeatureRanking`
             The method to calculate the feature importance.
 
         Returns
         -------
         `np.ndarray`
-            The feature importance according to the selected method, which is a 2-D np.array
-            containing the ranking for each output property of size
-            (`spectraxai.dataset.Dataset.n_outputs`, `spectraxai.dataset.Dataset.n_features`)
+            The feature importance according to the selected method, which is a 2-D
+            np.array containing the ranking for each output property of size
+            (`spectraxai.dataset.Dataset.n_outputs`,
+            `spectraxai.dataset.Dataset.n_features`)
 
         """
         if not isinstance(method, FeatureRanking):
@@ -202,7 +218,7 @@ class PreHocAnalysis(_Explain):
     def correlogram(
         self, top: int = 5, method: FeatureRanking = FeatureRanking.CORR
     ) -> plt.Axes:
-        """Plot a correlogram between the most important input features and the output(s).
+        """Plot a correlogram between the most important inputs and the output(s).
 
         Parameters
         ----------
@@ -210,12 +226,14 @@ class PreHocAnalysis(_Explain):
             The number of most important features to consider. Defaults to 5.
 
         method: `FeatureRanking`, optional
-            The method to calculate the feature importance. Defaults to FeatureRanking.CORR.
+            The method to calculate the feature importance.
+            Defaults to FeatureRanking.CORR.
 
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         metric = self.feature_importance(method)
         fig, axes = plt.subplots(
@@ -231,26 +249,29 @@ class PreHocAnalysis(_Explain):
                 m, b = np.polyfit(x, y, 1)
                 axes[i, j].plot(x, m * x + b, c="k")
                 axes[i, j].set_ylim(y_lim)
-                axes[i, j].set_title("{0} {1:.2f}".format(method.value, corr[ind[j]]))
-                axes[i, j].set_xlabel(
-                    "Feature {0}".format(self.dataset.X_names[ind[j]])
-                )
-                axes[i, j].set_ylabel("Output {0}".format(self.dataset.Y_names[i]))
+                axes[i, j].set_title("{} {:.2f}".format(method.value, corr[ind[j]]))
+                axes[i, j].set_xlabel("Feature {}".format(self.dataset.X_names[ind[j]]))
+                axes[i, j].set_ylabel("Output {}".format(self.dataset.Y_names[i]))
         plt.tight_layout()
         return axes
 
     def bar_plot_importance(self, method: FeatureRanking = FeatureRanking.CORR):
-        """Plot a bar plot depicting the feature ranking between the input features and the output(s).
+        """Plot a bar plot of feature ranking.
+
+        The feature ranking is calculated between the input features and the output(s)
+        according to the method specified.
 
         Parameters
         ----------
         method: `FeatureRanking`, optional
-            The method to calculate the feature importance. Defaults to FeatureRanking.CORR.
+            The method to calculate the feature importance.
+            Defaults to FeatureRanking.CORR.
 
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         metric = self.feature_importance(method)
         fig, axes = plt.subplots(
@@ -270,7 +291,7 @@ class PreHocAnalysis(_Explain):
         return axes
 
     def mean_spectrum(self, ax=None) -> plt.Axes:
-        """Plot mean spectrum :math:`\pm` sd of the dataset.
+        r"""Plot mean spectrum $\pm$ sd of the dataset.
 
         Parameters
         ----------
@@ -305,27 +326,29 @@ class PreHocAnalysis(_Explain):
         preprocesses: List[SpectralPreprocessing] = [],
         ylims: List = [],
     ) -> plt.Axes:
-        """
-        Creates a plot of the mean spectrum (across all samples) for each output range.
+        """Plot the mean spectrum (across all samples) per output range.
 
         Parameters
         ----------
         y_ranges: List[np.array]
-            A list of length `spectraxai.dataset.n_outputs` containing the ranges to calculate the mean spectrum wrapped in an np.array.
-            For example np.array([0, 1, 5]) means calculate the means from outputs 0 to 1 and 1 to 5.
+            A list of length `spectraxai.dataset.n_outputs` containing the ranges to
+            calculate the mean spectrum wrapped in an np.array. For example,
+            np.array([0, 1, 5]) means calculate the means from [0, 1) and [1, 5].
 
         preprocesses: `List[spectraxai.spectra.SpectralPreprocessing]`, optional
-            An optional list of preprocessing techniques to plot simultaneously on the same figure.
-            If omitted, it will only plot the spectra of the passed dataset.
+            An optional list of preprocessing techniques to plot simultaneously on the
+            same figure. If omitted, it only plots the spectra of the passed dataset.
 
         ylims: List[List], optional
             An optional list of the ylim to use on each of the supplied preprocesses.
-            If preprocesses was omitted this can be a list of length 1 to act on the dataset's spectra.
+            If preprocesses was omitted this can be a list of length 1 to act on the
+            dataset's spectra.
 
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         if len(y_ranges) != self.dataset.n_outputs:
             raise AssertionError(
@@ -396,14 +419,12 @@ class PreHocAnalysis(_Explain):
 
 
 class PostHocAnalysis(_Explain):
-    """
-    A class to provide methods for providing post-hoc explainability analysis.
-    """
+    """A class to provide methods for post-hoc explainability analysis."""
 
     def bar_plot_importance(
         self, importance: np.ndarray, ax: plt.Axes = None
     ) -> plt.Axes:
-        """Plots a bar plot of the feature importance
+        """Plot a bar plot of the feature importance.
 
         Parameters
         ----------
@@ -419,13 +440,14 @@ class PostHocAnalysis(_Explain):
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         return self._bar_plot(height=importance, ax=None, ylabel="Importance")
 
     def circular_bar_plot_importance(
         self, importance: np.ndarray, ax: plt.Axes = None, top: int = None
     ) -> plt.Axes:
-        """Plots a circular (spiral) bar plot of the feature importance
+        """Plot a circular (spiral) bar plot of the feature importance.
 
         Parameters
         ----------
@@ -437,10 +459,15 @@ class PostHocAnalysis(_Explain):
             An optional matplotlib axes to plot into. Defaults to None,
             in which case a new figure is created.
 
+        top: `int`, optional
+            The number of most important features to consider. Defaults to None, where
+            all features all plotted.
+
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         if ax is None:
             plt.figure(figsize=(20, 10))
@@ -465,7 +492,7 @@ class PostHocAnalysis(_Explain):
         # Compute max and min in the dataset
         max = df["Value"].max()
 
-        # Let's compute heights: they are a conversion of each item value in those new coordinates
+        # Heights are a conversion of each item value in those new coordinates
         # In our example, 0 in the dataset will be converted to the lowerLimit (10)
         # The maximum will be converted to the upperLimit (100)
         slope = (upperLimit - lowerLimit) / max
@@ -519,7 +546,7 @@ class PostHocAnalysis(_Explain):
     def bar_plot_permutation_importance(
         self, model, dataset: Dataset = None, ax: plt.axes = None
     ):
-        """Create a bar plot using ermutation feature importance
+        """Create a bar plot using permutation feature importance.
 
         Parameters
         ----------
@@ -552,6 +579,22 @@ class PostHocAnalysis(_Explain):
         return ax
 
     def sage_importance(self, model):
+        """Calculate SAGE based importance.
+
+        SAGE (Shapley Additive Global importancE) is a game-theoretic approach for
+        understanding black-box machine learning models.
+
+        Parameters
+        ----------
+        model: object
+            The estimator that has already been fitted
+
+        Returns
+        -------
+        `np.ndarray`
+            The feature importance according to SAGE
+
+        """
         # Set up an imputer to handle missing features
         imputer = sage.MarginalImputer(model, self.dataset.X)
 
