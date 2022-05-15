@@ -1,18 +1,26 @@
+"""The module `spectraxai.spectra` supports operations on spectra.
+
+This module defines the class `Spectra` which can be used to hold spectral
+datasets (only the features, e.g. reflectance values) and perform common
+operations on them like pre-processing.
+
+"""
+
 import ast
 import numpy as np
 from enum import Enum
 from scipy.signal import savgol_filter
 from typing import Union, Tuple, Dict, List
 
-from spectraxai.utils.continuumRemoval import continuum_removal
+from spectraxai.utils import continuum_removal
 
 
 class SpectralPreprocessing(str, Enum):
-    """
-    Spectral Preprocessing enum
+    """Spectral Preprocessing enum.
 
-    A collection of different spectral pre-processing (or pre-treatments)
-    that may be applied to a spectral matrix.
+    A collection of different spectral pre-processing (or pre- treatments) that
+    may be applied to a spectral matrix.
+
     """
 
     NONE = "no"
@@ -53,7 +61,7 @@ class SpectralPreprocessing(str, Enum):
         return lst
 
     def init_class(string: str):
-        """Initialize a SpectralPreprocessing object from its string representation"""
+        """Initialize from its string representation."""
         lst = ast.literal_eval(
             string.replace("no", "'no'")
             .replace("reflectance", "'reflectance'")
@@ -71,11 +79,13 @@ class SpectralPreprocessing(str, Enum):
 SpectralPreprocessingOptions = Union[
     SpectralPreprocessing, Tuple[SpectralPreprocessing, Dict[str, int]]
 ]
-""" Either a single SpectralPreprocessing or a tuple specifying a SpectralPreprocessing and its assorted options (e.g. window_length for SG).
+""" Either a single SpectralPreprocessing or a tuple specifying a
+SpectralPreprocessing and its assorted options (e.g. window_length for SG).
 
 Examples:
 - SpectralPreprocessing.CR => continuum-removal
-- (SpectralPreprocessing.SG2, {"window_length": 7, "polyorder": 3}) => SG2 with window_length of 7 and polyorder of 3
+- (SpectralPreprocessing.SG2, {"window_length": 7, "polyorder": 3}) =>
+    SG2 with window_length of 7 and polyorder of 3
 """
 SpectralPreprocessingSequence = List[
     Union[SpectralPreprocessingOptions, List[SpectralPreprocessingOptions]]
@@ -85,22 +95,23 @@ SpectralPreprocessingSequence = List[
 Examples:
 - [SpectralPreprocessing.NONE] => no pre-treatment
 - [SpectralPreprocessing.ABS, SpectralPreprocessing.CR] => ABS + CR
-- [(SpectralPreprocessing.SG1, {"window_length": 7}), SpectralPreprocessing.SNV] => SG1 + SNV
+- [(SpectralPreprocessing.SG1, {"window_length": 7}), SpectralPreprocessing.SNV] =>
+    SG1 + SNV
  """
 
 
 class Spectra:
-    """
-    Spectra class to hold a 2-D spectral matrix.
+    """Spectra class to hold a 2-D spectral matrix.
 
     Can accept a 1-D vector but always returns a 2-D matrix.
+
     """
 
     X: np.ndarray
     """A 2-D matrix representing the spectra"""
 
     def __init__(self, X: np.ndarray) -> None:
-        """X is a np 2D array containing the (samples, wavelengths) matrix"""
+        """X is a np 2D array containing the (samples, wavelengths) matrix."""
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         if X.ndim != 2:
@@ -108,15 +119,15 @@ class Spectra:
         self.X = X
 
     def reflectance(self) -> "Spectra":
-        """Transform absorbance to reflectance"""
+        """Transform absorbance to reflectance."""
         return Spectra(-1 * self.X**10)
 
     def absorbance(self) -> "Spectra":
-        """Transform reflectance to absorbance"""
+        """Transform reflectance to absorbance."""
         return Spectra(-1 * np.log10(self.X))
 
     def snv(self) -> "Spectra":
-        """Apply the standard normal variate transform"""
+        """Apply the standard normal variate transform."""
         snv = np.zeros(self.X.shape)
         mu, sd = self.X.mean(axis=-1), self.X.std(axis=-1, ddof=1)
         for i in range(np.shape(self.X)[0]):
@@ -124,19 +135,20 @@ class Spectra:
         return Spectra(snv)
 
     def sg(self, **kwargs) -> "Spectra":
-        """
-        Apply a general Savitzky–Golay transform.
+        """Apply a general Savitzky–Golay transform.
 
-        You need to pass as kwargs the parameters of `scipy.signal.savgol_filter`
+        You need to pass as kwargs the parameters of
+        `scipy.signal.savgol_filter`
+
         """
         return Spectra(savgol_filter(self.X, **kwargs))
 
     def cr(self) -> "Spectra":
-        """Transform absorbance spectra using the Continuum Removal"""
+        """Transform absorbance spectra using the Continuum Removal."""
         return Spectra(continuum_removal(np.squeeze(self.X)))
 
     def apply(self, method: SpectralPreprocessing, **kwargs) -> "Spectra":
-        """Apply the transform specified by method"""
+        """Apply the transform specified by method."""
         if method == SpectralPreprocessing.REF:
             return self.reflectance()
         elif method == SpectralPreprocessing.ABS:

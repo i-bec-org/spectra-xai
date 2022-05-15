@@ -1,3 +1,11 @@
+"""The module `spectraxai.models` includes classes and operations on ML models.
+
+This module defines the class `StandardModel` which should be used to train your
+models. It supports different ML algorithms and provides short-hand versions to
+test multiple pre-treatment methods.
+
+"""
+
 import time
 from enum import Enum
 from typing import Dict, List, Union
@@ -12,14 +20,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.base import BaseEstimator
 from cubist import Cubist
 
-from spectraxai.utils.modelAssessment import metrics
-from spectraxai.utils.svrParams import sigest
+from spectraxai.utils import metrics, sigest
 from spectraxai.spectra import SpectralPreprocessing, SpectralPreprocessingSequence
 from spectraxai.dataset import Dataset
 
 
 class Model(str, Enum):
-    """A model class to describe commonly used ML models for spectral processing"""
+    """A class to describe commonly used ML models for spectral processing."""
 
     PLS = "Partial Least Squares"
     SVR = "Support Vector Regression"
@@ -34,16 +41,19 @@ class Model(str, Enum):
 
 
 class StandardModel:
-    """Class with standard models for machine learning that can be applied to spectral datasets"""
+    """Class with standard models for ML to apply on spectral datasets."""
 
     model: Model
     """The type of `Model` used"""
     init_hyperparameters: Dict
-    """A dictionary of the hyperparameters of the models identified by an expert, to override a grid search"""
+    """A dictionary of the hyperparameters of the models identified by an expert,
+    to override a grid search"""
     grid_search_hyperparameters: Dict
-    """A dictionary containing as keys the hyperparameters of the model and as values a list of the potential candidate values"""
+    """A dictionary containing as keys the hyperparameters of the model and as values
+    a list of the potential candidate values"""
     best_hyperparameters: Dict
-    """A dictionary of the best hyperparameters, either set externally or as identified after calling the train function"""
+    """A dictionary of the best hyperparameters, either set externally or as identified
+    after calling the train function"""
     training_time: float
     """Training time in seconds"""
     testing_time: float
@@ -51,7 +61,8 @@ class StandardModel:
     best_model: BaseEstimator
     """The best optimized model after tuning the hyperparameters"""
     best_score: float
-    """The best score (R2 for regression and accuracy for classification) in the internal validation set corresponding to the best model"""
+    """The best score (R2 for regression and accuracy for classification) in the
+    internal validation set corresponding to the best model"""
 
     def __init__(
         self,
@@ -59,10 +70,13 @@ class StandardModel:
         init_hyperparameters: Dict = {},
         grid_search_hyperparameters: Dict = {},
     ):
-        """
+        """Initialize StandardModel class for a `Model` and its hyperparameters.
+
+        You need to pass either a set of hyperparameters for the model, or a range
+        thereof in which to search for the optimal set.
+
         Parameters
         ----------
-
         model: `Model`
             Select a model from `Model` class.
 
@@ -71,10 +85,12 @@ class StandardModel:
 
         grid_search_hyperparameters: `dict`, optional
             Specify custom grid search range for the hyperparameters
+
         """
         if len(init_hyperparameters) != 0 and len(grid_search_hyperparameters) != 0:
             raise AssertionError(
-                "You cannot specify both init_hyperparameters and grid_search_hyperparameters"
+                "You cannot specify both init_hyperparameters and"
+                "grid_search_hyperparameters"
             )
         self.model = model
         self.init_hyperparameters = init_hyperparameters
@@ -126,12 +142,12 @@ class StandardModel:
         If you didn't supply the `init_hyperparameters` option to the constructor, then
         a grid search optimization process takes place as follows:
         Using the sklearn.model_selection.GridSearchCV approach, a grid search using a
-        cross-validation splitting strategy specified by cv is performed. After the optimal
-        hyperparameters are defined, the model is then retrained on the whole dataset.
+        cross-validation splitting strategy specified by cv is performed. After the
+        optimal hyperparameters are defined, the model is then retrained on the whole
+        dataset.
 
         Parameters
         ----------
-
         dataset: `spectraxai.dataset.Dataset`
             the Dataset to train the model
 
@@ -140,10 +156,12 @@ class StandardModel:
             Possible inputs for cv are:
             * integer, to specify the number of folds
             * An iterable yielding (train, test) splits as arrays of indices
+
         """
         if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
             raise AssertionError(
-                "Cannot create a multi-output SVR model. Please train a model for each output property."
+                "Cannot create a multi-output SVR model. "
+                "Please train a model for each output property."
             )
 
         # Scale the data for SVR
@@ -211,7 +229,7 @@ class StandardModel:
         self.training_time = trn_t1 - trn_t0
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
-        """Predict using the best_model from a new unknown input
+        """Predict using the best_model from a new unknown input.
 
         Parameters
         ----------
@@ -222,6 +240,7 @@ class StandardModel:
         -------
         `np.ndarray`
             A np.ndarray of size (n_test_samples, n_outputs) with the predictions
+
         """
         if self.best_model is None:
             raise RuntimeError("You need to train the model first")
@@ -243,23 +262,23 @@ class StandardModel:
         idx_tst: np.ndarray = np.array([]),
         get_model: bool = False,
     ) -> pandas.DataFrame:
-        """Trains and tests a model given a dataset and a spectral pre-processing sequence.
+        """Train and test a model in given dataset and spectral pre-processing sequence.
 
-        Pass here the whole dataset of (X, Y) and either specify idx_trn (training indices) or idx_tst (testing indices).
+        Pass here the whole dataset of (X, Y) and either specify
+        idx_trn (training indices) or idx_tst (testing indices).
 
         Parameters
         ----------
-
         dataset: `spectraxai.dataset.Dataset`
             the Dataset to train the model
 
         preprocess: `spectraxai.spectra.SpectralPreprocessingSequence`
             Optional pre-processing sequence. Defaults to SpectralPreprocessing.NONE.
 
-        idx_trn: `np.array`
+        idx_trn: `np.ndarray`
             The indices of the trn samples. Defaults to np.array([]).
 
-        idx_tst: `np.array`
+        idx_tst: `np.ndarray`
             The indices of the tst samples. Defaults to np.array([]).
 
         get_model: `bool`
@@ -269,8 +288,8 @@ class StandardModel:
         -------
         `pandas.DataFrame`
             The accuracy results and assorted metadata for each output property
-        """
 
+        """
         if idx_tst.size == 0 and idx_trn.size == 0:
             raise AssertionError(
                 "You need to specify either tst or trn indices or both"
@@ -338,9 +357,10 @@ class StandardModel:
         idx_trn: np.ndarray = np.array([]),
         idx_tst: np.ndarray = np.array([]),
     ) -> pandas.DataFrame:
-        """Train a model using different SpectralPreprocessingSequences and predict on the test set
+        """Train a model using different pre-treatments and predict on the test set.
 
-        A short-hand version to quickly test different pre-treatments, calling the train_and_test function
+        A short-hand version to quickly test different pre-treatments methods,
+        calling the `train_and_test` function.
 
         Parameters
         ----------
@@ -350,10 +370,10 @@ class StandardModel:
         preprocesses: `spectraxai.spectra.List[SpectralPreprocessingSequence]`
             List of different pre-processing sequences to test. Defaults to [].
 
-        idx_trn: `np.array`
+        idx_trn: `np.ndarray`
             The indices of the trn samples. Defaults to np.array([]).
 
-        idx_tst: `np.array`
+        idx_tst: `np.ndarray`
             The indices of the tst samples. Defaults to np.array([]).
 
         Returns
@@ -361,6 +381,7 @@ class StandardModel:
         `pandas.DataFrame`
             Returns a dataframe with the results of the trained models.
             By default, no model is returned to keep a low memory footprint.
+
         """
         if len(preprocesses) == 0:
             raise ValueError(

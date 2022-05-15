@@ -3,6 +3,22 @@ from scipy.spatial import ConvexHull
 
 
 def continuum_removal(spectrum: np.ndarray, wvs: list = []):
+    """Calculate the continuum removal pre-treatment.
+
+    Parameters
+    ----------
+    spectrum: `np.ndarray`
+        Either a vector or a matrix of the spectra signatures.
+
+    wvs: `list`, optional
+        An optional list of the wavelengths
+
+    Returns
+    -------
+    `np.ndarray`
+        Either a vector or a matrix of the pre-processed spectra
+
+    """
     assert spectrum.ndim == 1 or spectrum.ndim == 2
 
     if len(wvs) == 0:

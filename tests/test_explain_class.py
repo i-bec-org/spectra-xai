@@ -1,6 +1,6 @@
 import unittest
 from spectraxai.explain import PreHocAnalysis, FeatureRanking
-from spectraxai.utils.datasets import load_GR_SSL
+from spectraxai.data import load_GR_SSL
 
 
 class TestPreHocAnalysisClass(unittest.TestCase):
