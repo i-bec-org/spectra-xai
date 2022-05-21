@@ -136,7 +136,7 @@ class StandardModel:
             vips[i] = np.sqrt(p * (s.T @ weight) / total_s)
         return vips
 
-    def train(self, dataset: Dataset, cv: Union[int, List] = 5):
+    def fit(self, dataset: Dataset, cv: Union[int, List] = 5):
         """Trains the model on a given dataset.
 
         If you didn't supply the `init_hyperparameters` option to the constructor, then
@@ -254,7 +254,7 @@ class StandardModel:
         self.testing_time = tst_t1 - tst_t0
         return y_hat
 
-    def train_and_test(
+    def fit_and_predict(
         self,
         dataset: Dataset,
         preprocess: SpectralPreprocessingSequence = SpectralPreprocessing.NONE,
@@ -299,14 +299,18 @@ class StandardModel:
         if idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray):
             results = []
             for fold in range(idx_trn.shape[0]):
-                result = self.train_and_test(dataset, preprocess, idx_trn=idx_trn[fold])
+                result = self.fit_and_predict(
+                    dataset, preprocess, idx_trn=idx_trn[fold]
+                )
                 result["fold"] = fold + 1
                 results.append(result)
             return pandas.concat(results, ignore_index=True)
         elif idx_tst.size > 0 and isinstance(idx_tst[0], np.ndarray):
             results = []
             for fold in range(idx_tst.shape[0]):
-                result = self.train_and_test(dataset, preprocess, idx_tst=idx_tst[fold])
+                result = self.fit_and_predict(
+                    dataset, preprocess, idx_tst=idx_tst[fold]
+                )
                 result["fold"] = fold + 1
                 results.append(result)
             return pandas.concat(results, ignore_index=True)
@@ -316,7 +320,7 @@ class StandardModel:
             idx_trn, idx_tst = dataset.train_test_split_explicit(tst=idx_tst)
 
         dataset = dataset.preprocess(preprocess)
-        self.train(Dataset(dataset.X[idx_trn], dataset.Y[idx_trn]))
+        self.fit(Dataset(dataset.X[idx_trn], dataset.Y[idx_trn]))
         y_hat = self.predict(dataset.X[idx_tst])
 
         results = []
@@ -350,7 +354,7 @@ class StandardModel:
             results.append(res)
         return pandas.DataFrame(results)
 
-    def train_and_test_multiple(
+    def fit_and_predict_multiple(
         self,
         dataset: Dataset,
         preprocesses: List[SpectralPreprocessingSequence] = [],
@@ -360,7 +364,7 @@ class StandardModel:
         """Train a model using different pre-treatments and predict on the test set.
 
         A short-hand version to quickly test different pre-treatments methods,
-        calling the `train_and_test` function.
+        calling the `fit_and_predict` function.
 
         Parameters
         ----------
@@ -388,7 +392,7 @@ class StandardModel:
                 "The list of SpectralPreprocessingSequence may not be empty"
             )
         results = [
-            self.train_and_test(dataset, preprocess, idx_trn, idx_tst)
+            self.fit_and_predict(dataset, preprocess, idx_trn, idx_tst)
             for preprocess in preprocesses
         ]
         return pandas.concat(results, ignore_index=True)

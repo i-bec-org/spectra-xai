@@ -31,7 +31,7 @@ from spectraxai.dataset import DatasetSplit
 idx_trn, idx_tst = dataset.train_test_split(DatasetSplit.KENNARD_STONE, 0.8)
 pls = StandardModel(Model.PLS)
 
-results = pls.train_and_test(
+results = pls.fit_and_predict(
     dataset,
     preprocess=(SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3}),
     idx_trn=idx_trn

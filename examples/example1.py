@@ -38,5 +38,5 @@ methods = [
     [SpectralPreprocessing.NONE, SpectralPreprocessing.SNV],
 ]
 
-res = StandardModel(Model.PLS).train_and_test_multiple(dataset, methods, idx_trn)
+res = StandardModel(Model.PLS).fit_and_predict_multiple(dataset, methods, idx_trn)
 print(res[["pre_process", "fold", "RMSE", "R2", "RPIQ"]])

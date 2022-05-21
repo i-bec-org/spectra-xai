@@ -110,61 +110,63 @@ class TestStandardModelClass(unittest.TestCase):
     def test_wrong_params_model_train(self):
         for model in self.models:
             # Neither idx_trn nor idx_tst
-            self.assertRaises(AssertionError, model.train_and_test, self.dataset1D)
+            self.assertRaises(AssertionError, model.fit_and_predict, self.dataset1D)
             self.assertRaises(
                 AssertionError,
-                model.train_and_test,
+                model.fit_and_predict,
                 self.dataset1D,
                 SpectralPreprocessing.NONE,
             )
             # Both idx_trn and idx_tst
             self.assertRaises(
                 AssertionError,
-                model.train_and_test,
+                model.fit_and_predict,
                 self.dataset1D,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             self.assertRaises(
                 AssertionError,
-                model.train_and_test,
+                model.fit_and_predict,
                 self.dataset1D,
                 SpectralPreprocessing.NONE,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             # No list of sequences given
-            self.assertRaises(ValueError, model.train_and_test_multiple, self.dataset1D)
+            self.assertRaises(
+                ValueError, model.fit_and_predict_multiple, self.dataset1D
+            )
             self.assertRaises(
                 ValueError,
-                model.train_and_test_multiple,
+                model.fit_and_predict_multiple,
                 self.dataset1D,
                 idx_trn=self.idx_trn,
             )
             self.assertRaises(
                 ValueError,
-                model.train_and_test_multiple,
+                model.fit_and_predict_multiple,
                 self.dataset1D,
                 idx_tst=self.idx_tst,
             )
             # Neither idx_trn nor idx_tst passed
             self.assertRaises(
                 AssertionError,
-                model.train_and_test_multiple,
+                model.fit_and_predict_multiple,
                 self.dataset1D,
                 self.methods,
             )
             # Both idx_trn and idx_tst passed
             self.assertRaises(
                 AssertionError,
-                model.train_and_test_multiple,
+                model.fit_and_predict_multiple,
                 self.dataset1D,
                 self.methods,
                 idx_trn=self.idx_trn,
                 idx_tst=self.idx_tst,
             )
             # This should work
-            model.train_and_test_multiple(
+            model.fit_and_predict_multiple(
                 self.dataset1D, self.methods, idx_trn=self.idx_trn
             )
 
@@ -173,23 +175,23 @@ class TestStandardModelClass(unittest.TestCase):
             if model.model in [Model.SVR, Model.CUBIST]:
                 self.assertRaises(
                     AssertionError,
-                    model.train_and_test,
+                    model.fit_and_predict,
                     self.dataset2D,
                     idx_trn=self.idx_trn,
                 )
                 self.assertRaises(
                     AssertionError,
-                    model.train_and_test_multiple,
+                    model.fit_and_predict_multiple,
                     self.dataset2D,
                     self.methods,
                     idx_trn=self.idx_trn,
                 )
             else:
                 self.assertEqual(
-                    len(model.train_and_test(self.dataset2D, idx_trn=self.idx_trn)), 2
+                    len(model.fit_and_predict(self.dataset2D, idx_trn=self.idx_trn)), 2
                 )
 
-    def test_train_and_test_multiple(self):
+    def test_fit_and_predict_multiple(self):
         models = [
             StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [10, 20]}
@@ -207,10 +209,18 @@ class TestStandardModelClass(unittest.TestCase):
                 DatasetSplit.CROSS_VALIDATION, 3
             )
             for trn, tst in [(self.idx_trn, self.idx_tst), (idx_trn, idx_tst)]:
-                model.train_and_test_multiple(self.dataset1D, self.methods, idx_trn=trn)
-                model.train_and_test_multiple(self.dataset1D, self.methods, idx_tst=tst)
-                model.train_and_test_multiple(self.dataset2D, self.methods, idx_trn=trn)
-                model.train_and_test_multiple(self.dataset2D, self.methods, idx_tst=tst)
+                model.fit_and_predict_multiple(
+                    self.dataset1D, self.methods, idx_trn=trn
+                )
+                model.fit_and_predict_multiple(
+                    self.dataset1D, self.methods, idx_tst=tst
+                )
+                model.fit_and_predict_multiple(
+                    self.dataset2D, self.methods, idx_trn=trn
+                )
+                model.fit_and_predict_multiple(
+                    self.dataset2D, self.methods, idx_tst=tst
+                )
 
 
 if __name__ == "__main__":
