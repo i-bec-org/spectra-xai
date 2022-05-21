@@ -3,9 +3,13 @@
 This repository contains python code to enable XAI analysis on spectral datasets (e.g. VIS–NIR–SWIR).
 
 - [eXplainable Artificial Intelligence for spectral datasets](#explainable-artificial-intelligence-for-spectral-datasets)
+  - [Documentation](#documentation)
   - [Features](#features)
   - [Installation](#installation)
+  - [Examples](#examples)
   - [Running tests](#running-tests)
+  - [Building documentation](#building-documentation)
+  - [Update on jupyter.i-bec.org](#update-on-jupyteri-becorg)
 
 [![Build Status](https://dev.azure.com/i-bec/spectra-xai/_apis/build/status/i-bec-org.spectra-xai?branchName=main)](https://dev.azure.com/i-bec/spectra-xai/_build/latest?definitionId=1&branchName=main)
 
@@ -14,6 +18,15 @@ This repository contains python code to enable XAI analysis on spectral datasets
 The documentation is accessible on [static.i-bec.org/spectraxai](https://static.i-bec.org/spectraxai/) which is currently accessible only for the 155.207.180.* and 155.207.185.* subdomains.
 
 ## Features
+
+This library builds on top of popular python packages, such as [scikit-learn](https://scikit-learn.org/stable/), [pandas](https://pandas.pydata.org/) and [seaborn](https://seaborn.pydata.org/) to aid with the analysis of spectral datasets. Thus it provides wrapper solutions for easy:
+
+* Spectral pre-processing or pre-treatment
+* Dataset splitting into training and independent test sets
+* Model training and optimization of the algorithms' hyperparameters
+* Pre- and post-hoc explainability analysis including plotting of feature importance
+
+and more.
 
 ## Installation
 
@@ -39,16 +52,10 @@ To install the development packages use:
 pip install -e .[dev]
 ```
 
-## Update on jupyter.i-bec.org
+## Examples
 
-To update the package in our jupyter you need to:
+Some examples of the usage of this library may be found under the [examples](examples) folder.
 
-1. ssh into the VM as administrator
-2. change user to jupyter-administrator ```sudo su jupyter-administrator``` 
-3. activate the environment ```source /opt/tljh/user/bin/activate && source activate spectraxai```
-4. ```cd ~/installation_packages/spectra-xai``` where the installation files are located
-5. run ```git pull``` to update the installation files
-6. run ```sudo pip install .``` to install the update
 
 ## Running tests
 
@@ -66,7 +73,13 @@ Documentation may be generated via:
 pdoc --docformat numpy --math -o docs spectraxai
 ```
 
-## Examples
+## Update on jupyter.i-bec.org
 
-Some examples of the usage of this library may be found under the [examples](examples) folder.
+To update the package in our jupyter you need to:
 
+1. ssh into the VM as administrator
+2. change user to jupyter-administrator ```sudo su jupyter-administrator``` 
+3. activate the environment ```source /opt/tljh/user/bin/activate && source activate spectraxai```
+4. ```cd ~/installation_packages/spectra-xai``` where the installation files are located
+5. run ```git pull``` to update the installation files
+6. run ```sudo pip install .``` to install the update
