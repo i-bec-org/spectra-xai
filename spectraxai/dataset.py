@@ -92,6 +92,8 @@ class Scale(str, Enum):
             return X, scaler.get_params()
         elif len(set_attributes) != 0:
             return X, Scale.__get_scale_attributes(method, scaler)
+        else:
+            return X
 
     def inverse(
         X: np.ndarray, method: "Scale", set_params: Dict = {}, set_attributes: Dict = {}
