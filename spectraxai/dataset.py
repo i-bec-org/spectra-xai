@@ -23,7 +23,11 @@ from spectraxai.spectra import Spectra, SpectralPreprocessingSequence
 
 
 class Scale(str, Enum):
-    """Scaling of an input feature (or of the output)."""
+    """Scaling of an input feature (or of the output).
+
+    Uses the `sklearn.preprocessing` library under the hood.
+
+    """
 
     STANDARD = "standard"
     """Standard scaling, i.e. removing the mean and scaling to unit variance"""
@@ -128,7 +132,7 @@ class Scale(str, Enum):
         if method == Scale.STANDARD:
             scaler = StandardScaler()
         elif method == Scale.MINMAX:
-            scaler = MinMaxScaler
+            scaler = MinMaxScaler()
         if len(set_params) != 0:
             scaler = scaler.set_params(**set_params)
         scaler = Scale.__set_scale_attributes(method, scaler, set_attributes)
@@ -358,6 +362,10 @@ class Dataset:
         self, trn: np.ndarray = np.array([]), tst: np.ndarray = np.array([])
     ) -> DataSplit:
         """Split dataset to train and test from pre-selected by the user indices.
+
+        This is useful in cases where one has the set containing the training
+        indices of a dataset and wants to get the complement of the training set to
+        obtain the test set.
 
         Parameters
         ----------

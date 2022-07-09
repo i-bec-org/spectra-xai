@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+from numpy.testing import assert_allclose
 from sklearn.datasets import make_regression
 from spectraxai.dataset import Scale
 
@@ -31,8 +32,8 @@ class TestScaleClass(unittest.TestCase):
         Y_val_scaled = Scale.apply(
             self.Y[self.idx_val], Scale.STANDARD, y_scale_params, y_scale_attributes
         )
-        self.assertAlmostEqual(X_trn_scaled.mean(), X_val_scaled.mean(), delta=0.1)
-        self.assertAlmostEqual(Y_trn_scaled.mean(), Y_val_scaled.mean(), delta=0.1)
+        assert_allclose(X_trn_scaled.mean(axis=0), X_val_scaled.mean(axis=0), atol=0.35)
+        assert_allclose(Y_trn_scaled.mean(axis=0), Y_val_scaled.mean(axis=0), atol=0.35)
 
     def test_minmax(self):
         X_trn_scaled, x_scale_params, x_scale_attributes = Scale.apply(
@@ -47,5 +48,5 @@ class TestScaleClass(unittest.TestCase):
         Y_val_scaled = Scale.apply(
             self.Y[self.idx_val], Scale.MINMAX, y_scale_params, y_scale_attributes
         )
-        self.assertAlmostEqual(X_trn_scaled.mean(), X_val_scaled.mean(), delta=0.01)
-        self.assertAlmostEqual(Y_trn_scaled.mean(), Y_val_scaled.mean(), delta=0.01)
+        assert_allclose(X_trn_scaled.mean(axis=0), X_val_scaled.mean(axis=0), atol=0.1)
+        assert_allclose(Y_trn_scaled.mean(axis=0), Y_val_scaled.mean(axis=0), atol=0.1)
