@@ -68,13 +68,14 @@ class Scale(str, Enum):
             A dictionary of parameters defined in the corresponding
             `sklearn.preprocessing` class. Returned only if set_params
             was not passed.
-        
+
         scale_attributes: dict
             A dictionary of the attributes defined in the corresponding
             `sklearn.preprocessing` class. Returned only if set_attributes
-            was not passed.   
-        
+            was not passed.
+
         """
+        print("Called with ", set_params, set_attributes)
         if method == Scale.STANDARD:
             scaler = StandardScaler()
         elif method == Scale.MINMAX:
@@ -86,14 +87,15 @@ class Scale(str, Enum):
         else:
             scaler = scaler.fit(X)
         X = scaler.transform(X)
-        if len(set_params) != 0 and len(set_attributes) != 0:
+        if len(set_params) == 0 and len(set_attributes) == 0:
+            print("Returning everything")
             return X, scaler.get_params(), Scale.__get_scale_attributes(method, scaler)
-        elif len(set_params) != 0:
-            return X, scaler.get_params()
-        elif len(set_attributes) != 0:
-            return X, Scale.__get_scale_attributes(method, scaler)
-        else:
+        elif len(set_params) != 0 and len(set_attributes) != 0:
             return X
+        elif len(set_attributes) != 0:
+            return X, scaler.get_params()
+        elif len(set_params) != 0:
+            return X, Scale.__get_scale_attributes(method, scaler)
 
     def inverse(
         X: np.ndarray, method: "Scale", set_params: Dict = {}, set_attributes: Dict = {}
