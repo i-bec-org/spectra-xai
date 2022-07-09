@@ -33,3 +33,19 @@ class TestScaleClass(unittest.TestCase):
         )
         self.assertAlmostEqual(X_trn_scaled.mean(), X_val_scaled.mean(), delta=0.1)
         self.assertAlmostEqual(Y_trn_scaled.mean(), Y_val_scaled.mean(), delta=0.1)
+
+    def test_minmax(self):
+        X_trn_scaled, x_scale_params, x_scale_attributes = Scale.apply(
+            self.X[self.idx_trn], Scale.MINMAX
+        )
+        Y_trn_scaled, y_scale_params, y_scale_attributes = Scale.apply(
+            self.Y[self.idx_trn], Scale.MINMAX
+        )
+        X_val_scaled = Scale.apply(
+            self.X[self.idx_val], Scale.MINMAX, x_scale_params, x_scale_attributes
+        )
+        Y_val_scaled = Scale.apply(
+            self.Y[self.idx_val], Scale.MINMAX, y_scale_params, y_scale_attributes
+        )
+        self.assertAlmostEqual(X_trn_scaled.mean(), X_val_scaled.mean(), delta=0.01)
+        self.assertAlmostEqual(Y_trn_scaled.mean(), Y_val_scaled.mean(), delta=0.01)

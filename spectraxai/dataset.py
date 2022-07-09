@@ -75,11 +75,10 @@ class Scale(str, Enum):
             was not passed.
 
         """
-        print("Called with ", set_params, set_attributes)
         if method == Scale.STANDARD:
             scaler = StandardScaler()
         elif method == Scale.MINMAX:
-            scaler = MinMaxScaler
+            scaler = MinMaxScaler()
         if len(set_params) != 0:
             scaler = scaler.set_params(**set_params)
         if len(set_attributes) != 0:
@@ -88,7 +87,6 @@ class Scale(str, Enum):
             scaler = scaler.fit(X)
         X = scaler.transform(X)
         if len(set_params) == 0 and len(set_attributes) == 0:
-            print("Returning everything")
             return X, scaler.get_params(), Scale.__get_scale_attributes(method, scaler)
         elif len(set_params) != 0 and len(set_attributes) != 0:
             return X
