@@ -50,20 +50,30 @@ class Scale(str, Enum):
         method: `Scale`
             The method to use for scaling
 
-        set_params: dict
+        set_params: dict, optional
             A dictionary of parameters defined in the corresponding
             `sklearn.preprocessing` class
 
-        set_attributes: dict
+        set_attributes: dict, optional
             A dictionary of the attributes defined in the corresponding
             `sklearn.preprocessing` class
 
 
         Returns
         -------
-        A tuple of the scaled matrix, the params, and the attributes of the scaling
-        method, so that one may apply it on e.g. a different matrix.
+        X: `np.ndarray`
+            The scaled matrix
 
+        scale_params: dict
+            A dictionary of parameters defined in the corresponding
+            `sklearn.preprocessing` class. Returned only if set_params
+            was not passed.
+        
+        scale_attributes: dict
+            A dictionary of the attributes defined in the corresponding
+            `sklearn.preprocessing` class. Returned only if set_attributes
+            was not passed.   
+        
         """
         if method == Scale.STANDARD:
             scaler = StandardScaler()
@@ -76,7 +86,12 @@ class Scale(str, Enum):
         else:
             scaler = scaler.fit(X)
         X = scaler.transform(X)
-        return X, scaler.get_params(), Scale.__get_scale_attributes(method, scaler)
+        if len(set_params) != 0 and len(set_attributes) != 0:
+            return X, scaler.get_params(), Scale.__get_scale_attributes(method, scaler)
+        elif len(set_params) != 0:
+            return X, scaler.get_params()
+        elif len(set_attributes) != 0:
+            return X, Scale.__get_scale_attributes(method, scaler)
 
     def inverse(
         X: np.ndarray, method: "Scale", set_params: Dict = {}, set_attributes: Dict = {}
