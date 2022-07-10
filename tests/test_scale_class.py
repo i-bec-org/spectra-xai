@@ -34,6 +34,14 @@ class TestScaleClass(unittest.TestCase):
         )
         assert_allclose(X_trn_scaled.mean(axis=0), X_val_scaled.mean(axis=0), atol=0.35)
         assert_allclose(Y_trn_scaled.mean(axis=0), Y_val_scaled.mean(axis=0), atol=0.35)
+        X_trn_original = Scale.inverse(
+            X_trn_scaled, Scale.STANDARD, x_scale_params, x_scale_attributes
+        )
+        assert_allclose(self.X[self.idx_trn], X_trn_original)
+        Y_trn_original = Scale.inverse(
+            Y_trn_scaled, Scale.STANDARD, y_scale_params, y_scale_attributes
+        )
+        assert_allclose(self.Y[self.idx_trn], Y_trn_original)
 
     def test_minmax(self):
         X_trn_scaled, x_scale_params, x_scale_attributes = Scale.apply(
@@ -50,3 +58,11 @@ class TestScaleClass(unittest.TestCase):
         )
         assert_allclose(X_trn_scaled.mean(axis=0), X_val_scaled.mean(axis=0), atol=0.1)
         assert_allclose(Y_trn_scaled.mean(axis=0), Y_val_scaled.mean(axis=0), atol=0.1)
+        X_trn_original = Scale.inverse(
+            X_trn_scaled, Scale.MINMAX, x_scale_params, x_scale_attributes
+        )
+        assert_allclose(self.X[self.idx_trn], X_trn_original)
+        Y_trn_original = Scale.inverse(
+            Y_trn_scaled, Scale.MINMAX, y_scale_params, y_scale_attributes
+        )
+        assert_allclose(self.Y[self.idx_trn], Y_trn_original)
