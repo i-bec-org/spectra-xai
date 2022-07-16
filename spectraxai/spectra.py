@@ -113,14 +113,14 @@ class Spectra:
     def __init__(self, X: np.ndarray) -> None:
         """X is a np 2D array containing the (samples, wavelengths) matrix."""
         if X.ndim == 1:
-            X = X.reshape(-1, 1)
+            X = X.reshape(1, -1)
         if X.ndim != 2:
             raise AssertionError("X should be a 2-D matrix")
         self.X = X
 
     def reflectance(self) -> "Spectra":
         """Transform absorbance to reflectance."""
-        return Spectra(-1 * self.X**10)
+        return Spectra(1 / 10**self.X)
 
     def absorbance(self) -> "Spectra":
         """Transform reflectance to absorbance."""
