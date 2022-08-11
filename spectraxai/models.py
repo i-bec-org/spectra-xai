@@ -104,7 +104,7 @@ class StandardModel:
                 }
             elif model == Model.RF:
                 self.grid_search_hyperparameters = {
-                    "max_features": ["auto", "sqrt", "log2"],
+                    "max_features": [1.0, "sqrt", "log2"],
                     "n_estimators": [50, 100, 150, 200],
                 }
             elif model == Model.PLS:
