@@ -9,7 +9,7 @@ from scipy.stats import gaussian_kde
 def metrics(y_true: np.ndarray, y_pred: np.ndarray):
     """Calculate accuracy metrics for regression.
 
-    Returns a dictionary containing RMSE (Root Mean Squared Error), $R^$ (coefficient
+    Returns a dictionary containing RMSE (Root Mean Squared Error), $R^2$ (coefficient
     of determination) and RPIQ (Ratio of Performance to InterQuartile distance).
 
     Parameters

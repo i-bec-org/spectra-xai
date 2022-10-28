@@ -11,7 +11,7 @@ from sklearn.preprocessing import PolynomialFeatures
 
 
 def sigest(x, frac=0.5, scale=True):
-    r"""Estimate SVM/SVR $\gamma$ based on 0.1 - 0.9 quantile of ||x-x'||^2.
+    r"""Estimate SVM/SVR $\gamma$ based on 0.1 - 0.9 quantile of $||x-x'||^2$.
 
     Based on sigest function of kernlab. More details may be found here:
     * https://www.rdocumentation.org/packages/kernlab/
@@ -43,7 +43,7 @@ def sigest(x, frac=0.5, scale=True):
 
 
 def estimate_C(y):
-    r"""Estimate SVR C based on max{|mean(y)-3\\sigma(y)|, |mean(y)+3\\sigma(y)|}.
+    r"""Estimate SVR C from $\max{(|\overline{y}-3\sigma_y|,|\overline{y}+3\sigma_y|)}$.
 
     Rule-of-thumb from dx.doi.org/10.1016/S0893-6080(03)00169-2, Eq. 13.
 
