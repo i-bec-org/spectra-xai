@@ -303,6 +303,7 @@ class PreHocAnalysis(_Explain):
         -------
         `plt.Axes`
             The matplotlib axes with the plot
+
         """
         if ax is None:
             plt.figure(figsize=(11.69, 8.27), dpi=200)
