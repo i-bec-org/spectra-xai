@@ -112,6 +112,8 @@ class Spectra:
 
     def __init__(self, X: np.ndarray) -> None:
         """X is a np 2D array containing the (samples, wavelengths) matrix."""
+        if not isinstance(X, np.ndarray):
+            raise TypeError("X should be a numpy array")
         if X.ndim == 1:
             X = X.reshape(1, -1)
         if X.ndim != 2:

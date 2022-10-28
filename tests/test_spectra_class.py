@@ -2,9 +2,10 @@ import unittest
 from spectraxai.spectra import Spectra, SpectralPreprocessing
 from spectraxai.data import load_GR_SSL
 from numpy.testing import assert_allclose
+import pandas
 
 
-class TestStandardModelClass(unittest.TestCase):
+class TestSpectraClass(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.dataset = load_GR_SSL()
@@ -16,6 +17,9 @@ class TestStandardModelClass(unittest.TestCase):
     def test_2D_constructor(self):
         spec = Spectra(self.dataset.X)
         self.assertTrue(spec.X.shape == self.dataset.X.shape)
+
+    def test_pandas_constructor(self):
+        self.assertRaises(TypeError, Spectra, pandas.DataFrame(self.dataset.X))
 
     def test_simple_pre_treatments(self):
         pre_treatments = [
