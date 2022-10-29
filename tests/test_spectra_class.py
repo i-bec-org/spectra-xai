@@ -29,7 +29,7 @@ class TestSpectraClass(unittest.TestCase):
             SpectralPreprocessing.CR,
         ]
         for pre_treatment in pre_treatments:
-            spec = Spectra(self.dataset.X).apply(pre_treatment)
+            spec = Spectra(self.dataset.X).preprocess(pre_treatment)
             self.assertTrue(spec.X.shape == self.dataset.X.shape)
 
     def test_sg_pre_treatments(self):
@@ -39,13 +39,33 @@ class TestSpectraClass(unittest.TestCase):
             (SpectralPreprocessing.SG2, {"window_length": 21, "polyorder": 3}),
         ]
         for pre_treatment in pre_treatments:
-            spec = Spectra(self.dataset.X).apply(pre_treatment[0], **pre_treatment[1])
+            spec = Spectra(self.dataset.X).preprocess(pre_treatment)
             self.assertTrue(spec.X.shape == self.dataset.X.shape)
 
     def test_reversible(self):
         spec = (
             Spectra(self.dataset.X)
-            .apply(SpectralPreprocessing.ABS)
-            .apply(SpectralPreprocessing.REF)
+            .preprocess(SpectralPreprocessing.ABS)
+            .preprocess(SpectralPreprocessing.REF)
         )
         assert_allclose(spec.X, self.dataset.X)
+        spec = Spectra(self.dataset.X).absorbance().reflectance()
+        assert_allclose(spec.X, self.dataset.X)
+
+    def test_sequence(self):
+        spec1 = Spectra(self.dataset.X).absorbance()
+        spec2 = Spectra(self.dataset.X).preprocess(SpectralPreprocessing.ABS)
+        assert_allclose(spec1.X, spec2.X)
+        spec1 = Spectra(self.dataset.X).absorbance().snv()
+        spec2 = Spectra(self.dataset.X).preprocess(
+            [SpectralPreprocessing.ABS, SpectralPreprocessing.SNV]
+        )
+        assert_allclose(spec1.X, spec2.X)
+        spec1 = Spectra(self.dataset.X).sg(deriv=1, window_length=21, polyorder=3).snv()
+        spec2 = Spectra(self.dataset.X).preprocess(
+            [
+                (SpectralPreprocessing.SG1, {"window_length": 21, "polyorder": 3}),
+                SpectralPreprocessing.SNV,
+            ]
+        )
+        assert_allclose(spec1.X, spec2.X)

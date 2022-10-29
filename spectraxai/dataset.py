@@ -418,22 +418,5 @@ class Dataset:
 
         """
         return Dataset(
-            self.__preprocess(self.X, method), self.Y, self.X_names, self.Y_names
+            Spectra(self.X).preprocess(method).X, self.Y, self.X_names, self.Y_names
         )
-
-    def __preprocess(
-        self, X: np.ndarray, method: SpectralPreprocessingSequence
-    ) -> np.ndarray:
-        if isinstance(method, str):
-            return Spectra(X).apply(method).X
-        elif isinstance(method, tuple):
-            return Spectra(X).apply(method[0], **method[1]).X
-        elif isinstance(method, list):
-            for each_method in method:
-                if isinstance(each_method, str):
-                    X = Spectra(X).apply(each_method).X
-                elif isinstance(each_method, tuple):
-                    X = Spectra(X).apply(each_method[0], **each_method[1]).X
-                elif isinstance(each_method, list):
-                    X = self.__preprocess(X, each_method)
-            return X

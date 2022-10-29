@@ -1434,7 +1434,7 @@ The new input data to predict their output</li>
             <span class="name">fit_and_predict</span><span class="signature">(
     self,
     dataset: <a href="dataset.html#Dataset">spectraxai.dataset.Dataset</a>,
-    preprocess: List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]], List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]]]]]] = no,
+    preprocess: Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]], List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]]]]] = no,
     idx_trn: numpy.ndarray = array([], dtype=float64),
     idx_tst: numpy.ndarray = array([], dtype=float64),
     get_model: bool = False
@@ -1583,7 +1583,7 @@ If true, also return the generated model. Defaults to False.</li>
             <span class="name">fit_and_predict_multiple</span><span class="signature">(
     self,
     dataset: <a href="dataset.html#Dataset">spectraxai.dataset.Dataset</a>,
-    preprocesses: List[List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]], List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]]]]]]] = [],
+    preprocesses: List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]], List[Union[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Tuple[<a href="spectra.html#SpectralPreprocessing">spectraxai.spectra.SpectralPreprocessing</a>, Dict[str, int]]]]]] = [],
     idx_trn: numpy.ndarray = array([], dtype=float64),
     idx_tst: numpy.ndarray = array([], dtype=float64)
 ) -&gt; pandas.core.frame.DataFrame</span>:

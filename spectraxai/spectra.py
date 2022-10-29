@@ -87,23 +87,25 @@ Examples:
 - (SpectralPreprocessing.SG2, {"window_length": 7, "polyorder": 3}) =>
     SG2 with window_length of 7 and polyorder of 3
 """
-SpectralPreprocessingSequence = List[
-    Union[SpectralPreprocessingOptions, List[SpectralPreprocessingOptions]]
+SpectralPreprocessingSequence = Union[
+    SpectralPreprocessingOptions, List[SpectralPreprocessingOptions]
 ]
-""" A sequence of one or more spectral pre-treatments (e.g. SG1 + SNV)
+""" A sequence of one or more spectral pre-treatments applied together (e.g. SG1 + SNV)
 
 Examples:
-- [SpectralPreprocessing.NONE] => no pre-treatment
+- SpectralPreprocessing.NONE => no pre-treatment
 - [SpectralPreprocessing.ABS, SpectralPreprocessing.CR] => ABS + CR
+- (SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3}) =>
+    SG1 with window_length of 7 and polyorder of 3
 - [(SpectralPreprocessing.SG1, {"window_length": 7}), SpectralPreprocessing.SNV] =>
     SG1 + SNV
  """
 
 
 class Spectra:
-    """Spectra class to hold a 2-D spectral matrix.
+    """Spectra class to hold a 2-D spectral matrix of shape (samples, wavelengths).
 
-    Can accept a 1-D vector but always returns a 2-D matrix.
+    Can accept a 1-D vector as input but always returns a 2-D matrix.
 
     """
 
@@ -149,8 +151,8 @@ class Spectra:
         """Transform absorbance spectra using the Continuum Removal."""
         return Spectra(continuum_removal(np.squeeze(self.X)))
 
-    def apply(self, method: SpectralPreprocessing, **kwargs) -> "Spectra":
-        """Apply the transform specified by method."""
+    def __preprocess(self, method: SpectralPreprocessing, **kwargs) -> "Spectra":
+        """Apply a single transform specified by method."""
         if method == SpectralPreprocessing.REF:
             return self.reflectance()
         elif method == SpectralPreprocessing.ABS:
@@ -169,3 +171,31 @@ class Spectra:
             return self
         else:
             raise RuntimeError("Invalid method specified")
+
+    def preprocess(self, method: SpectralPreprocessingSequence) -> "Spectra":
+        """Apply a pre-processing sequence (i.e., one or more) specified by method.
+
+        Parameters
+        ----------
+        method: `spectraxai.spectra.SpectralPreprocessingSequence`
+            The method for the preprocess.
+
+        Returns
+        -------
+        `Spectra`
+            A new Spectra object, where X contains the preprocessed spectra.
+
+        """
+        if isinstance(method, str):
+            return self.__preprocess(method)
+        elif isinstance(method, tuple):
+            return self.__preprocess(method[0], **method[1])
+        elif isinstance(method, list):
+            for each_method in method:
+                if isinstance(each_method, str):
+                    self = self.__preprocess(each_method)
+                elif isinstance(each_method, tuple):
+                    self = self.__preprocess(each_method[0], **each_method[1])
+                elif isinstance(each_method, list):
+                    self = self.preprocess(each_method)
+            return self
