@@ -8,7 +8,7 @@ which has been trained on a given `spectraxai.dataset.Dataset`.
 """
 
 from enum import Enum
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -255,7 +255,11 @@ class PreHocAnalysis(_Explain):
         plt.tight_layout()
         return axes
 
-    def bar_plot_importance(self, method: FeatureRanking = FeatureRanking.CORR):
+    def bar_plot_importance(
+        self,
+        method: FeatureRanking = FeatureRanking.CORR,
+        ax: Union[plt.Axes, "np.ndarray[plt.Axes]"] = None,
+    ):
         """Plot a bar plot of feature ranking.
 
         The feature ranking is calculated between the input features and the output(s)
@@ -267,6 +271,9 @@ class PreHocAnalysis(_Explain):
             The method to calculate the feature importance.
             Defaults to FeatureRanking.CORR.
 
+        ax: `plt.Axes` or array of `plt.Axes`, optional
+            The axes on where to draw the bar plot (for one or more output variables)
+
         Returns
         -------
         `plt.Axes`
@@ -274,21 +281,24 @@ class PreHocAnalysis(_Explain):
 
         """
         metric = self.feature_importance(method)
-        fig, axes = plt.subplots(
-            self.dataset.n_outputs,
-            1,
-            figsize=(11.69, 8.27),
-            squeeze=False,
-            sharex=True,
-            sharey=True,
-            dpi=200,
-        )
+        if ax is None:
+            fig, ax = plt.subplots(
+                self.dataset.n_outputs,
+                1,
+                figsize=(11.69, 8.27),
+                squeeze=False,
+                sharex=True,
+                sharey=True,
+                dpi=200,
+            )
+            ax = ax.flatten()
         for i, corr in enumerate(metric):
-            self._bar_plot(height=corr, ax=axes[i, 0], ylabel=method.value)
-            axes[i, 0].set_title(self.dataset.Y_names[i])
+            self._bar_plot(height=corr, ax=ax[i], ylabel=method.value)
+            ax[i].set_title(self.dataset.Y_names[i])
+            self._stylize_plot(ax[i])
             if i + 1 < self.dataset.n_outputs:
-                axes[i, 0].set_xlabel("")
-        return axes
+                ax[i].set_xlabel("")
+        return ax
 
     def mean_spectrum(self, ax=None) -> plt.Axes:
         r"""Plot mean spectrum $\pm$ sd of the dataset.
@@ -315,7 +325,6 @@ class PreHocAnalysis(_Explain):
             data=pandas.melt(df, var_name="Wavelength"),
             x="Wavelength",
             y="value",
-            n_boot=200,
             ci="sd",
             ax=ax,
         )
@@ -485,7 +494,7 @@ class PostHocAnalysis(_Explain):
         if top is not None:
             df = df.iloc[-top:]
 
-        # Constants = parameters controling the plot layout:
+        # Constants = parameters controlling the plot layout:
         upperLimit = 100
         lowerLimit = 30
         labelPadding = 4

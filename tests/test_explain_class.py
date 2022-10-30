@@ -15,3 +15,8 @@ class TestPreHocAnalysisClass(unittest.TestCase):
                 imp = xai.feature_importance(method)
                 self.assertTrue(imp.shape[0] == xai.dataset.n_outputs)
                 self.assertTrue(imp.shape[1] == xai.dataset.n_features)
+
+    def test_bar_plot_feature_importance(self):
+        for xai in [self.xai1D, self.xai2D]:
+            for method in FeatureRanking:
+                xai.bar_plot_importance(method)

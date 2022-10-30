@@ -277,9 +277,13 @@ class StandardModel:
 
         idx_trn: `np.ndarray`
             The indices of the trn samples. Defaults to np.array([]).
+            This can either be a one dimensional array (for a single split), or
+            two-dimensional to indicate a cross-validation split.
 
         idx_tst: `np.ndarray`
             The indices of the tst samples. Defaults to np.array([]).
+            This can either be a one dimensional array (for a single split), or
+            two-dimensional to indicate a cross-validation split.
 
         get_model: `bool`
             If true, also return the generated model. Defaults to False.
@@ -296,7 +300,7 @@ class StandardModel:
             )
         if idx_tst.size > 0 and idx_trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
-        if idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray):
+        if idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray):  # Multiple-folds
             results = []
             for fold in range(idx_trn.shape[0]):
                 result = self.fit_and_predict(
@@ -305,7 +309,7 @@ class StandardModel:
                 result["fold"] = fold + 1
                 results.append(result)
             return pandas.concat(results, ignore_index=True)
-        elif idx_tst.size > 0 and isinstance(idx_tst[0], np.ndarray):
+        elif idx_tst.size > 0 and isinstance(idx_tst[0], np.ndarray):  # Multiple-folds
             results = []
             for fold in range(idx_tst.shape[0]):
                 result = self.fit_and_predict(

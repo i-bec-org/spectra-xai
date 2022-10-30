@@ -171,6 +171,8 @@ class TestDatasetClass(unittest.TestCase):
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
             idx_trn, idx_tst = dataset.train_test_split_explicit(trn=trn)
             self._assertions_for_folded_splits(idx_trn, idx_tst, n_splits)
+            idx_trn, idx_tst = dataset.train_test_split_explicit(tst=idx_tst)
+            self._assertions_for_folded_splits(idx_trn, idx_tst, n_splits)
 
     def test_folded_splits(self):
         N_FOLDS = 5
@@ -193,6 +195,17 @@ class TestDatasetClass(unittest.TestCase):
                 idx_tst,
                 N_FOLDS,
             )
+
+    def test_subset(self):
+        self.assertRaises(ValueError, self.datasetY1dim.subset, np.array([]))
+        self.assertRaises(
+            ValueError, self.datasetY1dim.subset, np.random.random((2, 2))
+        )
+        self.assertRaises(
+            ValueError, self.datasetY1dim.subset, np.random.randint(1, 5, size=(4, 4))
+        )
+        self.assertRaises(ValueError, self.datasetY1dim.subset, np.array([-1, 2, 10e7]))
+        self.datasetY2dim.subset(np.array([0, 1, 2]))
 
 
 if __name__ == "__main__":

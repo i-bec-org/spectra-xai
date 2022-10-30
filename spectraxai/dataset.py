@@ -338,26 +338,6 @@ class Dataset:
         else:
             raise RuntimeError("Not a valid split method!")
 
-    def subset(self, idx: np.ndarray) -> "Dataset":
-        """Subset the dataset using passed indices.
-
-        Parameters
-        ----------
-        idx: np.ndarray
-            The indices to subset by
-
-        Returns
-        -------
-        `Dataset`
-            A new Dataset populated by the passed indices
-
-        """
-        if idx.size == 0:
-            raise ValueError("Passed indices for subsetting cannot be empty")
-        if idx.size > 0 and isinstance(idx[0], np.ndarray):
-            raise ValueError("Expected indices array to contain only one dimension")
-        return Dataset(self.X[idx], self.Y[idx], self.X_names, self.Y_names)
-
     def train_test_split_explicit(
         self, trn: np.ndarray = np.array([]), tst: np.ndarray = np.array([])
     ) -> DataSplit:
@@ -402,6 +382,28 @@ class Dataset:
                 raise AssertionError("Passed indices contain out of bound values")
             tst = np.array(list(set(range(0, self.n_samples)).difference(set(trn))))
         return trn, tst
+
+    def subset(self, idx: np.ndarray) -> "Dataset":
+        """Subset the dataset using passed indices.
+
+        Parameters
+        ----------
+        idx: np.ndarray
+            The indices to subset by
+
+        Returns
+        -------
+        `Dataset`
+            A new Dataset populated by the passed indices
+
+        """
+        if idx.size == 0:
+            raise ValueError("Passed indices for subsetting cannot be empty")
+        if idx.size > 0 and isinstance(idx[0], np.ndarray):
+            raise ValueError("Expected indices array to contain only one dimension")
+        if not np.logical_and(idx >= 0, idx <= self.n_samples).all():
+            raise ValueError("Indices contain out of bound values")
+        return Dataset(self.X[idx], self.Y[idx], self.X_names, self.Y_names)
 
     def preprocess(self, method: SpectralPreprocessingSequence) -> "Dataset":
         """Preprocess dataset by method.
