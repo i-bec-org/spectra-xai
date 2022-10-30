@@ -1,4 +1,6 @@
 import unittest
+
+from matplotlib import pyplot as plt
 from spectraxai.explain import PreHocAnalysis, FeatureRanking
 from spectraxai.data import load_GR_SSL
 
@@ -20,3 +22,6 @@ class TestPreHocAnalysisClass(unittest.TestCase):
         for xai in [self.xai1D, self.xai2D]:
             for method in FeatureRanking:
                 xai.bar_plot_importance(method)
+                fig, ax = plt.subplots(nrows=1, ncols=xai.dataset.n_outputs)
+                xai.bar_plot_importance(method, ax=ax)
+                plt.close("all")

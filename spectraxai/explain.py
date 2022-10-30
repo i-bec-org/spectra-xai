@@ -271,7 +271,7 @@ class PreHocAnalysis(_Explain):
             The method to calculate the feature importance.
             Defaults to FeatureRanking.CORR.
 
-        ax: `plt.Axes` or array of `plt.Axes`, optional
+        ax: Array of `plt.Axes`, optional
             The axes on where to draw the bar plot (for one or more output variables)
 
         Returns
@@ -292,6 +292,15 @@ class PreHocAnalysis(_Explain):
                 dpi=200,
             )
             ax = ax.flatten()
+        else:
+            msg = "The length of the axes should equal the number of outputs"
+            if isinstance(ax, plt.Axes):
+                if self.dataset.n_outputs == 1:
+                    ax = np.array([ax])
+                else:
+                    raise ValueError(msg)
+            if ax.size != self.dataset.n_outputs:
+                raise ValueError(msg)
         for i, corr in enumerate(metric):
             self._bar_plot(height=corr, ax=ax[i], ylabel=method.value)
             ax[i].set_title(self.dataset.Y_names[i])
