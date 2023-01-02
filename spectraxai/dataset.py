@@ -273,6 +273,12 @@ class Dataset:
             Y_names if Y_names else ["Y" + str(i + 1) for i in range(self.n_outputs)]
         )
 
+    def _repair_split_array(self, arr):
+        arr = np.array(arr, dtype=object)
+        if arr[0].dtype == np.dtype("O"):
+            arr = arr.astype(np.int64)
+        return arr
+
     def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
         """Split dataset with passed split method to train and test.
 
@@ -327,26 +333,14 @@ class Dataset:
             for trn_index, tst_index in kf.split(self.X):
                 idx_trn.append(np.array(trn_index))
                 idx_tst.append(np.array(tst_index))
-            idx_trn = np.array(idx_trn, dtype=object)
-            idx_tst = np.array(idx_tst, dtype=object)
-            if idx_trn[0].dtype == np.dtype("O"):
-                idx_trn = idx_trn.astype(np.int64)
-            if idx_tst[0].dtype == np.dtype("O"):
-                idx_tst = idx_tst.astype(np.int64)
-            return idx_trn, idx_tst
+            return self._repair_split_array(idx_trn), self._repair_split_array(idx_tst)
         elif split == DatasetSplit.STRATIFIED:
             skf = StratifiedKFold(n_splits=opt)
             idx_trn, idx_tst = [], []
             for trn_index, tst_index in skf.split(self.X, self.Y):
                 idx_trn.append(np.array(trn_index))
                 idx_tst.append(np.array(tst_index))
-            idx_trn = np.array(idx_trn, dtype=object)
-            idx_tst = np.array(idx_tst, dtype=object)
-            if idx_trn[0].dtype == np.dtype("O"):
-                idx_trn = idx_trn.astype(np.int64)
-            if idx_tst[0].dtype == np.dtype("O"):
-                idx_tst = idx_tst.astype(np.int64)
-            return idx_trn, idx_tst
+            return self._repair_split_array(idx_trn), self._repair_split_array(idx_tst)
         else:
             raise RuntimeError("Not a valid split method!")
 
@@ -378,21 +372,22 @@ class Dataset:
         if tst.size > 0 and trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
         if tst.size > 0 and isinstance(tst[0], np.ndarray):
-            trn = np.array(
-                [self.train_test_split_explicit(tst=fold)[0] for fold in tst]
-            )
+            trn = [self.train_test_split_explicit(tst=fold)[0] for fold in tst]
         elif tst.size > 0:
             if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
-            trn = np.array(list(set(range(0, self.n_samples)).difference(set(tst))))
+            trn = list(set(range(0, self.n_samples)).difference(set(tst)))
         elif trn.size > 0 and isinstance(trn[0], np.ndarray):
-            tst = np.array(
-                [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
-            )
+            tst = [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
         else:
             if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
-            tst = np.array(list(set(range(0, self.n_samples)).difference(set(trn))))
+            tst = list(set(range(0, self.n_samples)).difference(set(trn)))
+        trn, tst = np.array(trn), np.array(tst)
+        if isinstance(trn[0], np.ndarray) and trn[0].dtype == "O":
+            trn = trn.astype(np.int64)
+        if isinstance(tst[0], np.ndarray) and tst[0].dtype == "O":
+            tst = tst.astype(np.int64)
         return trn, tst
 
     def subset(self, idx: np.ndarray) -> "Dataset":
