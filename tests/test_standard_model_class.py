@@ -222,6 +222,14 @@ class TestStandardModelClass(unittest.TestCase):
                     self.dataset2D, self.methods, idx_tst=tst
                 )
 
+    def test_leave_one_out(self):
+        idx_trn, idx_tst = self.dataset1D.train_test_split(
+            DatasetSplit.CROSS_VALIDATION, self.dataset1D.n_samples
+        )
+        model = StandardModel(Model.PLS, init_hyperparameters={"n_components": 2})
+        for i in range(self.dataset1D.n_samples):
+            model.fit(dataset=self.dataset1D.subset(idx_trn[i]))
+
 
 if __name__ == "__main__":
     unittest.main(argv=[""], verbosity=2, exit=False)
