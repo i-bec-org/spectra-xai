@@ -24,7 +24,7 @@ setup(
         "pandas",
         "numpy",
         "scipy",
-        "sklearn",
+        "scikit-learn",
         "matplotlib",
         "cubist",
         "seaborn",
