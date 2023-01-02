@@ -69,6 +69,7 @@ class TestDatasetClass(unittest.TestCase):
             self.assertAlmostEqual(
                 idx_tst[i].size, 1 / N_FOLDS * self.nsamples, delta=0.02 * self.nsamples
             )
+            self.assertFalse(idx_trn[i].dtype == np.dtype("O"))
 
     def test_wrong_params(self):
         # Wrong opt param

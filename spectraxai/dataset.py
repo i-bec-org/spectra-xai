@@ -327,14 +327,26 @@ class Dataset:
             for trn_index, tst_index in kf.split(self.X):
                 idx_trn.append(np.array(trn_index))
                 idx_tst.append(np.array(tst_index))
-            return np.array(idx_trn, dtype=object), np.array(idx_tst, dtype=object)
+            idx_trn = np.array(idx_trn, dtype=object)
+            idx_tst = np.array(idx_tst, dtype=object)
+            if idx_trn[0].dtype == np.dtype("O"):
+                idx_trn = idx_trn.astype(np.int64)
+            if idx_tst[0].dtype == np.dtype("O"):
+                idx_tst = idx_tst.astype(np.int64)
+            return idx_trn, idx_tst
         elif split == DatasetSplit.STRATIFIED:
             skf = StratifiedKFold(n_splits=opt)
             idx_trn, idx_tst = [], []
             for trn_index, tst_index in skf.split(self.X, self.Y):
                 idx_trn.append(np.array(trn_index))
                 idx_tst.append(np.array(tst_index))
-            return np.array(idx_trn, dtype=object), np.array(idx_tst, dtype=object)
+            idx_trn = np.array(idx_trn, dtype=object)
+            idx_tst = np.array(idx_tst, dtype=object)
+            if idx_trn[0].dtype == np.dtype("O"):
+                idx_trn = idx_trn.astype(np.int64)
+            if idx_tst[0].dtype == np.dtype("O"):
+                idx_tst = idx_tst.astype(np.int64)
+            return idx_trn, idx_tst
         else:
             raise RuntimeError("Not a valid split method!")
 
