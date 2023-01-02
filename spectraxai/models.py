@@ -175,7 +175,7 @@ class StandardModel:
         # If hyperparameters are passed, use them; otherwise run grid search
         if len(self.init_hyperparameters) != 0:
             if self.model == Model.SVR:
-                self.best_model = SVR(kernel="rbf", max_iter=5e8)
+                self.best_model = SVR(kernel="rbf", max_iter=int(5e8))
                 self.best_model = self.best_model.set_params(
                     **self.init_hyperparameters
                 )
@@ -202,7 +202,7 @@ class StandardModel:
                     self.grid_search_hyperparameters["gamma"] = np.linspace(
                         gamma[0], gamma[2], num=5
                     )
-                model = SVR(kernel="rbf", max_iter=5e8)
+                model = SVR(kernel="rbf", max_iter=int(5e8))
             elif self.model == Model.PLS:
                 if "n_components" not in self.grid_search_hyperparameters:
                     self.grid_search_hyperparameters["n_components"] = np.arange(
