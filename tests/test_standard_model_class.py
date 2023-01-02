@@ -45,7 +45,7 @@ class TestStandardModelClass(unittest.TestCase):
             StandardModel(
                 Model.RF,
                 grid_search_hyperparameters={
-                    "max_features": ["log2", "auto"],
+                    "max_features": ["log2", 1.0],
                     "n_estimators": [50, 100],
                 },
             ),
@@ -97,7 +97,7 @@ class TestStandardModelClass(unittest.TestCase):
             StandardModel,
             Model.RF,
             {"max_features": "log2", "n_estimators": 50},
-            {"max_features": ["log2", "auto"], "n_estimators": [50, 100]},
+            {"max_features": ["log2", 1.0], "n_estimators": [50, 100]},
         )
         self.assertRaises(
             AssertionError,
@@ -199,7 +199,7 @@ class TestStandardModelClass(unittest.TestCase):
             StandardModel(
                 Model.RF,
                 grid_search_hyperparameters={
-                    "max_features": ["auto"],
+                    "max_features": ["log2"],
                     "n_estimators": [50, 100],
                 },
             ),
