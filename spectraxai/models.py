@@ -19,6 +19,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.base import BaseEstimator
 from cubist import Cubist
+import xgboost as xgb
 
 from spectraxai.utils import metrics, sigest
 from spectraxai.spectra import SpectralPreprocessing, SpectralPreprocessingSequence
@@ -32,6 +33,7 @@ class Model(str, Enum):
     SVR = "Support Vector Regression"
     RF = "Random Forest"
     CUBIST = "Cubist"
+    XGBOOST = "XGBoost"
 
     def __str__(self):
         return self.name
@@ -116,6 +118,14 @@ class StandardModel:
                     "neighbors": [1, 5, 9],
                     "composite": [True],
                 }
+            elif model == Model.XGBOOST:
+                self.grid_search_hyperparameters = {
+                    "max_depth": [3, 5, 8],
+                    "learning_rate": [0.05, 0.1, 0.2],
+                    "n_estimators": [10, 50, 100],
+                    "colsample_bytree": [0.3, 0.6],
+                    "alpha": [0, 10],
+                }
         self.training_time = None
         self.testing_time = None
         self.best_model = None
@@ -160,7 +170,7 @@ class StandardModel:
         """
         if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
             raise AssertionError(
-                "Cannot create a multi-output SVR model. "
+                "Cannot create a multi-output model. "
                 "Please train a model for each output property."
             )
 
@@ -191,6 +201,8 @@ class StandardModel:
                 )
             elif self.model == Model.CUBIST:
                 self.best_model = Cubist(**self.init_hyperparameters)
+            elif self.model == Model.XGBOOST:
+                self.best_model = xgb.XGBRegressor(**self.init_hyperparameters)
             trn_t0 = time.time()
             self.best_model.fit(X_train, np.squeeze(dataset.Y))
             self.best_hyperparameters = self.init_hyperparameters
@@ -213,6 +225,8 @@ class StandardModel:
                 model = RandomForestRegressor()
             elif self.model == Model.CUBIST:
                 model = Cubist()
+            elif self.model == Model.XGBOOST:
+                model = xgb.XGBRegressor(seed=2000)
             trn_t0 = time.time()
             grid_search = GridSearchCV(
                 estimator=model,

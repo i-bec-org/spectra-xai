@@ -30,6 +30,7 @@ setup(
         "seaborn",
         "sage-importance",
         "kennard-stone",
+        "xgboost",
     ],
     extras_require={
         "dev": [

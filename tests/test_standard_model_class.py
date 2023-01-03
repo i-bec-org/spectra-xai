@@ -14,6 +14,7 @@ class TestStandardModelClass(unittest.TestCase):
             StandardModel(Model.SVR),
             StandardModel(Model.RF),
             StandardModel(Model.CUBIST),
+            StandardModel(Model.XGBOOST),
             StandardModel(Model.PLS, init_hyperparameters={"n_components": 2}),
             StandardModel(
                 Model.SVR,
@@ -31,6 +32,7 @@ class TestStandardModelClass(unittest.TestCase):
                     "composite": True,
                 },
             ),
+            StandardModel(Model.XGBOOST, init_hyperparameters={"alpha": 10}),
             StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [2, 10, 20]}
             ),
@@ -55,6 +57,14 @@ class TestStandardModelClass(unittest.TestCase):
                     "neighbors": [1, 5],
                     "n_committees": [1, 5, 10],
                     "composite": [True],
+                },
+            ),
+            StandardModel(
+                Model.XGBOOST,
+                grid_search_hyperparameters={
+                    "learning_rate": [0.1, 0.3],
+                    "colsample_bytree": [0.3, 0.5],
+                    "max_depth": [3, 5],
                 },
             ),
         ]
@@ -105,6 +115,13 @@ class TestStandardModelClass(unittest.TestCase):
             Model.CUBIST,
             {"neighbors": 1, "n_committees": 5},
             {"neighbors": [1, 5], "n_committees": [1, 5, 10]},
+        )
+        self.assertRaises(
+            AssertionError,
+            StandardModel,
+            Model.XGBOOST,
+            {"learning_rate": 0.05},
+            {"learning_rate": [0.1, 0.05]},
         )
 
     def test_wrong_params_model_train(self):
@@ -201,6 +218,13 @@ class TestStandardModelClass(unittest.TestCase):
                 grid_search_hyperparameters={
                     "max_features": ["log2"],
                     "n_estimators": [50, 100],
+                },
+            ),
+            StandardModel(
+                Model.XGBOOST,
+                grid_search_hyperparameters={
+                    "learning_rate": [0.05, 0.1],
+                    "alpha": [0, 10],
                 },
             ),
         ]
