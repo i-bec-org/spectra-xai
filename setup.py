@@ -26,7 +26,7 @@ setup(
         "scipy",
         "scikit-learn",
         "matplotlib",
-        "cubist",
+        "cubist==0.1.0",
         "seaborn",
         "sage-importance",
         "kennard-stone",

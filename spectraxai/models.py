@@ -116,7 +116,6 @@ class StandardModel:
                 self.grid_search_hyperparameters = {
                     "n_committees": [1, 5, 10, 20],
                     "neighbors": [1, 5, 9],
-                    "composite": [True],
                 }
             elif model == Model.XGBOOST:
                 self.grid_search_hyperparameters = {

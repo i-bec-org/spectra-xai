@@ -29,7 +29,6 @@ class TestStandardModelClass(unittest.TestCase):
                 init_hyperparameters={
                     "n_committees": 5,
                     "neighbors": 1,
-                    "composite": True,
                 },
             ),
             StandardModel(Model.XGBOOST, init_hyperparameters={"alpha": 10}),
@@ -56,7 +55,6 @@ class TestStandardModelClass(unittest.TestCase):
                 grid_search_hyperparameters={
                     "neighbors": [1, 5],
                     "n_committees": [1, 5, 10],
-                    "composite": [True],
                 },
             ),
             StandardModel(
