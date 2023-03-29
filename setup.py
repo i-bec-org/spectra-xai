@@ -15,7 +15,7 @@ with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
 # This call to setup() does all the work
 setup(
     name="spectraxai",
-    version="0.3.1",
+    version="0.3.2",
     packages=find_packages(
         include=["spectraxai", "spectraxai.utils", "spectraxai.data"]
     ),
