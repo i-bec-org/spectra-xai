@@ -337,7 +337,7 @@ class PreHocAnalysis(_Explain):
             data=pandas.melt(df, var_name="Wavelength"),
             x="Wavelength",
             y="value",
-            ci="sd",
+            errorbar="sd",
             ax=ax,
         )
         return self._stylize_plot(ax)
