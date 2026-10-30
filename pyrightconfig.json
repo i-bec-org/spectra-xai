@@ -1,0 +1,6 @@
+{
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "basic",
+  "include": ["spectraxai", "tests", "examples", "setup.py"],
+  "exclude": ["build", "dist", "docs", "**/*.egg-info"]
+}

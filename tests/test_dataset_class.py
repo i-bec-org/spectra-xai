@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -9,24 +9,24 @@ import numpy as np
 
 class TestDatasetClass(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.nsamples = 100
-        self.nfeatures = 20
+    def setUpClass(cls) -> None:
+        cls.nsamples = 100
+        cls.nfeatures = 20
         X = (
-            np.arange(self.nsamples * self.nfeatures).reshape(
-                (self.nsamples, self.nfeatures)
+            np.arange(cls.nsamples * cls.nfeatures).reshape(
+                (cls.nsamples, cls.nfeatures)
             )
             + 1
         )
-        y = np.array(list(range(self.nsamples)))
-        Y = np.arange(self.nsamples * 2).reshape((self.nsamples, 2))
-        yclass = np.random.randint(2, size=self.nsamples)
-        self.datasetY1dim = Dataset(X, y)
-        self.datasetY2dim = Dataset(X, Y)
-        self.datasetYclass = Dataset(X, yclass)
-        self.split_size = 0.6
+        y = np.array(list(range(cls.nsamples)))
+        Y = np.arange(cls.nsamples * 2).reshape((cls.nsamples, 2))
+        yclass = np.random.randint(2, size=cls.nsamples)
+        cls.datasetY1dim = Dataset(X, y)
+        cls.datasetY2dim = Dataset(X, Y)
+        cls.datasetYclass = Dataset(X, yclass)
+        cls.split_size = 0.6
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         X_del = np.delete(self.datasetY1dim.X, 1, 0)
         # X and Y do not have the same number of rows
         self.assertRaises(AssertionError, Dataset, X_del, self.datasetY1dim.Y)
@@ -54,13 +54,15 @@ class TestDatasetClass(unittest.TestCase):
             Y_names=["output1"],
         )
 
-    def _assert_indices(self, idx_trn, idx_tst):
+    def _assert_indices(self, idx_trn: np.ndarray, idx_tst: np.ndarray) -> None:
         self.assertTrue(idx_trn.ndim == idx_tst.ndim == 1)
         self.assertTrue(idx_trn.shape[0] == int(self.split_size * self.nsamples))
         self.assertTrue(idx_tst.shape[0] == int((1 - self.split_size) * self.nsamples))
         self.assertFalse(bool(set(idx_trn).intersection(idx_tst)))
 
-    def _assertions_for_folded_splits(self, idx_trn, idx_tst, N_FOLDS):
+    def _assertions_for_folded_splits(
+        self, idx_trn: np.ndarray, idx_tst: np.ndarray, N_FOLDS: int
+    ) -> None:
         self.assertTrue(idx_trn.shape[0] == idx_tst.shape[0] == N_FOLDS)
         for i in range(N_FOLDS):
             self.assertTrue(idx_trn[i].ndim == idx_tst[i].ndim == 1)
@@ -75,7 +77,7 @@ class TestDatasetClass(unittest.TestCase):
             )
             self.assertFalse(idx_trn[i].dtype == np.dtype("O"))
 
-    def test_wrong_params(self):
+    def test_wrong_params(self) -> None:
         # Wrong opt param
         splits_a = [DatasetSplit.RANDOM, DatasetSplit.KENNARD_STONE]
         for method in splits_a:
@@ -128,21 +130,21 @@ class TestDatasetClass(unittest.TestCase):
             trn=np.array([0, 1, 100000]),
         )
 
-    def test_random_split(self):
+    def test_random_split(self) -> None:
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
             idx_trn, idx_tst = dataset.train_test_split(
                 DatasetSplit.RANDOM, self.split_size
             )
             self._assert_indices(idx_trn, idx_tst)
 
-    def test_ks_split(self):
+    def test_ks_split(self) -> None:
         for dataset in [self.datasetY1dim, self.datasetY2dim]:
             idx_trn, idx_tst = dataset.train_test_split(
                 DatasetSplit.KENNARD_STONE, self.split_size
             )
             self._assert_indices(idx_trn, idx_tst)
 
-    def test_explicit_split(self):
+    def test_explicit_split(self) -> None:
         trn = np.random.choice(
             np.arange(self.nsamples),
             int(self.nsamples * self.split_size),
@@ -160,7 +162,7 @@ class TestDatasetClass(unittest.TestCase):
             idx_trn, idx_tst = dataset.train_test_split_explicit(tst=tst)
             self._assert_indices(idx_trn, idx_tst)
 
-    def test_explicit_split_folded(self):
+    def test_explicit_split_folded(self) -> None:
         n_splits = 5
         folds = np.array_split(np.arange(self.nsamples), n_splits)
         indices = np.arange(self.nsamples)
@@ -179,7 +181,7 @@ class TestDatasetClass(unittest.TestCase):
             idx_trn, idx_tst = dataset.train_test_split_explicit(tst=idx_tst)
             self._assertions_for_folded_splits(idx_trn, idx_tst, n_splits)
 
-    def test_folded_splits(self):
+    def test_folded_splits(self) -> None:
         N_FOLDS = 5
         # Cross-validation
         for dataset in [self.datasetY1dim, self.datasetY2dim, self.datasetYclass]:
@@ -201,7 +203,7 @@ class TestDatasetClass(unittest.TestCase):
                 N_FOLDS,
             )
 
-    def test_subset(self):
+    def test_subset(self) -> None:
         self.assertRaises(ValueError, self.datasetY1dim.subset, np.array([]))
         self.assertRaises(
             ValueError, self.datasetY1dim.subset, np.random.random((2, 2))

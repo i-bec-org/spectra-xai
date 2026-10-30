@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
@@ -106,6 +106,8 @@ A number of different open source python packages are used like:
 To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
+
+Python 3.13 or newer is required.
 
 Note that the cubist dependency requires a C compiler; in a Debian-based OS one can install it via:
 ```

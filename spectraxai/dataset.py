@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The module `spectraxai.dataset` includes classes and operations on datasets.
@@ -12,8 +12,8 @@ on.
 """
 
 from enum import Enum
-from numbers import Number
-from typing import Tuple, Dict, List, Any
+from collections.abc import Sequence
+from typing import Any, overload
 
 import pandas
 import numpy as np
@@ -23,6 +23,20 @@ from sklearn.utils.validation import check_X_y
 import kennard_stone
 
 from spectraxai.spectra import Spectra, SpectralPreprocessingSequence
+
+ScaleResult = (
+    np.ndarray
+    | tuple[np.ndarray, dict[str, Any]]
+    | tuple[np.ndarray, dict[str, Any], dict[str, Any]]
+)
+"""Possible results from :meth:`Scale.apply`.
+
+The result contains the transformed array alone when both scaler parameters and
+attributes are supplied, a two-item tuple when only one is supplied, or a three-
+item tuple containing the transformed array, parameters, and attributes when
+neither is supplied.
+
+"""
 
 
 class Scale(str, Enum):
@@ -34,19 +48,61 @@ class Scale(str, Enum):
 
     STANDARD = "standard"
     """Standard scaling, i.e. removing the mean and scaling to unit variance."""
+
     MINMAX = "min-max"
     """Scale and translate so that the range is between zero and one."""
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
     @staticmethod
+    @overload
     def apply(
-        X: np.ndarray, method: "Scale", set_params: Dict = {}, set_attributes: Dict = {}
-    ) -> Tuple[np.ndarray, Dict, Dict]:
+        X: np.ndarray, method: "Scale"
+    ) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]: ...
+
+    @staticmethod
+    @overload
+    def apply(
+        X: np.ndarray,
+        method: "Scale",
+        set_params: dict[str, Any],
+        set_attributes: dict[str, Any],
+    ) -> ScaleResult: ...
+
+    @staticmethod
+    @overload
+    def apply(
+        X: np.ndarray,
+        method: "Scale",
+        set_params: dict[str, Any],
+    ) -> (
+        tuple[np.ndarray, dict[str, Any]]
+        | tuple[np.ndarray, dict[str, Any], dict[str, Any]]
+    ): ...
+
+    @staticmethod
+    @overload
+    def apply(
+        X: np.ndarray,
+        method: "Scale",
+        set_params: dict[str, Any] | None,
+        set_attributes: dict[str, Any],
+    ) -> (
+        tuple[np.ndarray, dict[str, Any]]
+        | tuple[np.ndarray, dict[str, Any], dict[str, Any]]
+    ): ...
+
+    @staticmethod
+    def apply(
+        X: np.ndarray,
+        method: "Scale",
+        set_params: dict[str, Any] | None = None,
+        set_attributes: dict[str, Any] | None = None,
+    ) -> ScaleResult:
         """Apply a method to scale a given array.
 
         Parameters
@@ -82,6 +138,8 @@ class Scale(str, Enum):
             was not passed.
 
         """
+        set_params = {} if set_params is None else set_params
+        set_attributes = {} if set_attributes is None else set_attributes
         if method == Scale.STANDARD:
             scaler = StandardScaler()
         elif method == Scale.MINMAX:
@@ -101,9 +159,14 @@ class Scale(str, Enum):
             return X, scaler.get_params()
         elif len(set_params) != 0:
             return X, Scale.__get_scale_attributes(method, scaler)
+        raise RuntimeError("Invalid scaler configuration")
 
+    @staticmethod
     def inverse(
-        X: np.ndarray, method: "Scale", set_params: Dict = {}, set_attributes: Dict = {}
+        X: np.ndarray,
+        method: "Scale",
+        set_params: dict[str, Any] | None = None,
+        set_attributes: dict[str, Any] | None = None,
     ) -> np.ndarray:
         """Apply a method to un-scale a given array.
 
@@ -130,7 +193,8 @@ class Scale(str, Enum):
             The un-scaled matrix
 
         """
-        if len(set_attributes) == 0:
+        set_params = {} if set_params is None else set_params
+        if not set_attributes:
             raise AssertionError("You need to specify set_attributes")
         if method == Scale.STANDARD:
             scaler = StandardScaler()
@@ -143,7 +207,9 @@ class Scale(str, Enum):
         return X
 
     @staticmethod
-    def __set_scale_attributes(method: "Scale", scaler: Any, set_attributes: Dict):
+    def __set_scale_attributes(
+        method: "Scale", scaler: Any, set_attributes: dict[str, Any]
+    ) -> Any:
         if method == Scale.STANDARD:
             scaler.scale_ = set_attributes["scale_"]
             scaler.mean_ = set_attributes["mean_"]
@@ -158,7 +224,7 @@ class Scale(str, Enum):
         return scaler
 
     @staticmethod
-    def __get_scale_attributes(method: "Scale", scaler: Any):
+    def __get_scale_attributes(method: "Scale", scaler: Any) -> dict[str, Any]:
         if method == Scale.STANDARD:
             return {
                 "scale_": scaler.scale_,
@@ -185,14 +251,14 @@ class DatasetSplit(str, Enum):
     CROSS_VALIDATION = "cross-validation"
     STRATIFIED = "stratified"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
 
-DataSplit = Tuple[
+DataSplit = tuple[
     np.ndarray,
     np.ndarray,
 ]
@@ -211,26 +277,32 @@ class Dataset:
 
     n_samples: int
     """Number of samples in the dataset."""
+
     n_features: int
     """Number of features in the dataset's input."""
+
     n_outputs: int
     """Number of outputs in the dataset's output."""
+
     X: np.ndarray
     """The spectral data of size (`n_samples`, `n_features`)"""
+
     Y: np.ndarray
     """The output properties of size (`n_samples`, `n_outputs`)"""
-    X_names: List[str]
+
+    X_names: list[str | int]
     """The names of the input features of size (`n_features`)"""
-    Y_names: List[str]
+
+    Y_names: list[str]
     """The names of the output properties of size (`n_outputs`)"""
 
     def __init__(
         self,
-        X: np.ndarray,
-        Y: np.ndarray,
-        X_names: List[str] = [],
-        Y_names: List[str] = [],
-    ):
+        X: np.ndarray | pandas.DataFrame,
+        Y: np.ndarray | pandas.DataFrame | pandas.Series,
+        X_names: Sequence[str | int] | None = None,
+        Y_names: Sequence[str] | None = None,
+    ) -> None:
         """Create a new Dataset from input and output arrays.
 
         Parameters
@@ -253,15 +325,17 @@ class Dataset:
             size 1. If missing, these will be autogenerated as Y1, Y2, etc.
 
         """
+        if isinstance(X, pandas.DataFrame):
+            X = X.to_numpy()
+        if isinstance(Y, pandas.DataFrame | pandas.Series):
+            Y = Y.to_numpy()
         if X.shape[0] != Y.shape[0]:
             raise AssertionError("X and Y don't have the same number of rows!")
         if X.ndim != 2:
             raise AssertionError("X should have exactly two dimensions")
-        self.X = X.to_numpy() if isinstance(X, pandas.DataFrame) else X
-        if isinstance(Y, pandas.DataFrame) or isinstance(Y, pandas.Series):
-            Y = Y.to_numpy()
+        self.X = X
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
-        check_X_y(X, Y, multi_output=True)
+        check_X_y(self.X, self.Y, multi_output=True)
         self.n_samples = self.X.shape[0]
         self.n_features = self.X.shape[1]
         self.n_outputs = self.Y.shape[1]
@@ -270,19 +344,23 @@ class Dataset:
         if Y_names and len(Y_names) != self.n_outputs:
             raise AssertionError("Y_names should have the same n_outputs as Y")
         self.X_names = (
-            X_names if X_names else ["X" + str(i + 1) for i in range(self.n_features)]
+            list(X_names)
+            if X_names
+            else ["X" + str(i + 1) for i in range(self.n_features)]
         )
         self.Y_names = (
-            Y_names if Y_names else ["Y" + str(i + 1) for i in range(self.n_outputs)]
+            list(Y_names)
+            if Y_names
+            else ["Y" + str(i + 1) for i in range(self.n_outputs)]
         )
 
-    def _repair_split_array(self, arr):
-        arr = np.array(arr, dtype=object)
-        if arr[0].dtype == np.dtype("O"):
-            arr = arr.astype(np.int64)
-        return arr
+    def _repair_split_array(self, arr: Sequence[np.ndarray]) -> np.ndarray:
+        result = np.array(arr, dtype=object)
+        if result[0].dtype == np.dtype("O"):
+            result = result.astype(np.int64)
+        return result
 
-    def train_test_split(self, split: DatasetSplit, opt: Number) -> DataSplit:
+    def train_test_split(self, split: DatasetSplit, opt: int | float) -> DataSplit:
         """Split dataset with passed split method to train and test.
 
         Parameters
@@ -322,7 +400,8 @@ class Dataset:
             if opt <= 1:
                 raise ValueError(msg)
         if split == DatasetSplit.RANDOM:
-            return train_test_split(indices, train_size=opt)
+            idx_trn, idx_tst = train_test_split(indices, train_size=opt)
+            return idx_trn, idx_tst
         elif split == DatasetSplit.KENNARD_STONE:
             _, _, idx_trn, idx_tst = kennard_stone.train_test_split(
                 self.X, indices, test_size=(1 - opt)
@@ -331,6 +410,7 @@ class Dataset:
         elif split == DatasetSplit.CLHS:
             raise NotImplementedError("clhs not implemented yet")
         elif split == DatasetSplit.CROSS_VALIDATION:
+            assert isinstance(opt, int)
             kf = KFold(opt, shuffle=True)
             idx_trn, idx_tst = [], []
             for trn_index, tst_index in kf.split(self.X):
@@ -338,17 +418,16 @@ class Dataset:
                 idx_tst.append(np.array(tst_index))
             return self._repair_split_array(idx_trn), self._repair_split_array(idx_tst)
         elif split == DatasetSplit.STRATIFIED:
+            assert isinstance(opt, int)
             skf = StratifiedKFold(n_splits=opt)
             idx_trn, idx_tst = [], []
             for trn_index, tst_index in skf.split(self.X, self.Y):
                 idx_trn.append(np.array(trn_index))
                 idx_tst.append(np.array(tst_index))
             return self._repair_split_array(idx_trn), self._repair_split_array(idx_tst)
-        else:
-            raise RuntimeError("Not a valid split method!")
 
     def train_test_split_explicit(
-        self, trn: np.ndarray = np.array([]), tst: np.ndarray = np.array([])
+        self, trn: np.ndarray | None = None, tst: np.ndarray | None = None
     ) -> DataSplit:
         """Split dataset to train and test from pre-selected by the user indices.
 
@@ -370,23 +449,33 @@ class Dataset:
             The idx_trn, idx_tst tuple
 
         """
+        trn = np.array([]) if trn is None else trn
+        tst = np.array([]) if tst is None else tst
         if tst.size == 0 and trn.size == 0:
             raise AssertionError("You need to specify either tst or trn indices")
         if tst.size > 0 and trn.size > 0:
             raise AssertionError("You cannot specify both trn and tst")
+        train_indices: np.ndarray | list[np.ndarray] = trn
+        test_indices: np.ndarray | list[np.ndarray] = tst
         if tst.size > 0 and isinstance(tst[0], np.ndarray):
-            trn = [self.train_test_split_explicit(tst=fold)[0] for fold in tst]
+            train_indices = [
+                self.train_test_split_explicit(tst=fold)[0] for fold in tst
+            ]
         elif tst.size > 0:
             if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
-            trn = list(set(range(0, self.n_samples)).difference(set(tst)))
+            train_indices = np.array(
+                list(set(range(0, self.n_samples)).difference(set(tst)))
+            )
         elif trn.size > 0 and isinstance(trn[0], np.ndarray):
-            tst = [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
+            test_indices = [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
         else:
             if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
                 raise AssertionError("Passed indices contain out of bound values")
-            tst = list(set(range(0, self.n_samples)).difference(set(trn)))
-        trn, tst = np.array(trn), np.array(tst)
+            test_indices = np.array(
+                list(set(range(0, self.n_samples)).difference(set(trn)))
+            )
+        trn, tst = np.array(train_indices), np.array(test_indices)
         if isinstance(trn[0], np.ndarray) and trn[0].dtype == "O":
             trn = trn.astype(np.int64)
         if isinstance(tst[0], np.ndarray) and tst[0].dtype == "O":

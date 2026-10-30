@@ -1,21 +1,13 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from importlib import resources
-
-import pandas
-
-from spectraxai.dataset import Dataset, DatasetSplit
+from spectraxai.dataset import DatasetSplit
+from spectraxai.data import load_GR_SSL
 from spectraxai.spectra import SpectralPreprocessing
 from spectraxai.models import Model, StandardModel
 
-
-DATA_FOLDER = "spectraxai.data"
-
-with resources.path(DATA_FOLDER, "SSL_GR.csv") as p:
-    df = pandas.read_csv(p)
-dataset = Dataset(df.loc[:, "350":"2500":20], df.OM)
+dataset = load_GR_SSL()
 idx_trn, idx_tst = dataset.train_test_split(DatasetSplit.CROSS_VALIDATION, 5)
 
 methods = [

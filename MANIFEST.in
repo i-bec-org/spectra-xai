@@ -1,5 +1,6 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 include spectraxai/data/SSL_GR.csv
+include spectraxai/py.typed

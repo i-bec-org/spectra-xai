@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The module `spectraxai.spectra` supports operations on spectra.
@@ -10,12 +10,16 @@ operations on them like pre-processing.
 """
 
 import ast
+from typing import Any, TypeGuard, cast
 import numpy as np
 from enum import Enum
 from scipy.signal import savgol_filter
-from typing import Union, Tuple, Dict, List
 
 from spectraxai.utils import continuum_removal
+
+
+def _is_numpy_array(value: object) -> TypeGuard[np.ndarray]:
+    return isinstance(value, np.ndarray)
 
 
 class SpectralPreprocessing(str, Enum):
@@ -35,13 +39,14 @@ class SpectralPreprocessing(str, Enum):
     SG2 = "SG2"
     CR = "continuum-removal"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
-    def __get_class(string):
+    @staticmethod
+    def __get_class(string: str) -> "SpectralPreprocessing | None":
         return {
             "no": SpectralPreprocessing.NONE,
             "reflectance": SpectralPreprocessing.REF,
@@ -53,7 +58,8 @@ class SpectralPreprocessing(str, Enum):
             "continuum-removal": SpectralPreprocessing.CR,
         }.get(string, None)
 
-    def __init_class(lst):
+    @staticmethod
+    def __init_class(lst: list[Any]) -> list[Any]:
         for i in range(len(lst)):
             if isinstance(lst[i], tuple):
                 lst[i] = (SpectralPreprocessing.__get_class(lst[i][0]), lst[i][1])
@@ -63,7 +69,8 @@ class SpectralPreprocessing(str, Enum):
                 lst[i] = SpectralPreprocessing.__get_class(lst[i])
         return lst
 
-    def init_class(string: str):
+    @staticmethod
+    def init_class(string: str) -> list[Any]:
         """Initialize from its string representation."""
         lst = ast.literal_eval(
             string.replace("no", "'no'")
@@ -79,9 +86,9 @@ class SpectralPreprocessing(str, Enum):
         return SpectralPreprocessing.__init_class(lst)
 
 
-SpectralPreprocessingOptions = Union[
-    SpectralPreprocessing, Tuple[SpectralPreprocessing, Dict[str, int]]
-]
+SpectralPreprocessingOptions = (
+    SpectralPreprocessing | tuple[SpectralPreprocessing, dict[str, int]]
+)
 """Either a single SpectralPreprocessing or a tuple specifying a SpectralPreprocessing
 and its assorted options (e.g. window_length for SG).
 
@@ -91,9 +98,10 @@ Examples:
     SG2 with window_length of 7 and polyorder of 3
 
 """
-SpectralPreprocessingSequence = Union[
-    SpectralPreprocessingOptions, List[SpectralPreprocessingOptions]
-]
+
+SpectralPreprocessingSequence = (
+    SpectralPreprocessingOptions | list[SpectralPreprocessingOptions]
+)
 """A sequence of one or more spectral pre-treatments applied together (e.g. SG1 + SNV)
 
 Examples:
@@ -119,7 +127,7 @@ class Spectra:
 
     def __init__(self, X: np.ndarray) -> None:
         """X is a np 2D array containing the (samples, wavelengths) matrix."""
-        if not isinstance(X, np.ndarray):
+        if not _is_numpy_array(X):
             raise TypeError("X should be a numpy array")
         if X.ndim == 1:
             X = X.reshape(1, -1)
@@ -143,20 +151,22 @@ class Spectra:
             snv[i, :] = (self.X[i, :] - mu[i]) / sd[i]
         return Spectra(snv)
 
-    def sg(self, **kwargs) -> "Spectra":
+    def sg(self, **kwargs: Any) -> "Spectra":
         """Apply a general Savitzky–Golay transform.
 
         You need to pass as kwargs the parameters of
         `scipy.signal.savgol_filter`
 
         """
-        return Spectra(savgol_filter(self.X, **kwargs))
+        return Spectra(cast(np.ndarray, savgol_filter(self.X, **kwargs)))
 
     def cr(self) -> "Spectra":
         """Transform absorbance spectra using the Continuum Removal."""
-        return Spectra(continuum_removal(np.squeeze(self.X)))
+        return Spectra(
+            cast(np.ndarray, np.array(continuum_removal(np.squeeze(self.X))))
+        )
 
-    def __preprocess(self, method: SpectralPreprocessing, **kwargs) -> "Spectra":
+    def __preprocess(self, method: SpectralPreprocessing, **kwargs: Any) -> "Spectra":
         """Apply a single transform specified by method."""
         if method == SpectralPreprocessing.REF:
             return self.reflectance()
@@ -174,8 +184,6 @@ class Spectra:
             return self.cr()
         elif method == SpectralPreprocessing.NONE:
             return self
-        else:
-            raise RuntimeError("Invalid method specified")
 
     def preprocess(self, method: SpectralPreprocessingSequence) -> "Spectra":
         """Apply a pre-processing sequence (i.e., one or more) specified by method.
@@ -191,13 +199,13 @@ class Spectra:
             A new Spectra object, where X contains the preprocessed spectra.
 
         """
-        if isinstance(method, str):
+        if isinstance(method, SpectralPreprocessing):
             return self.__preprocess(method)
         elif isinstance(method, tuple):
             return self.__preprocess(method[0], **method[1])
         elif isinstance(method, list):
             for each_method in method:
-                if isinstance(each_method, str):
+                if isinstance(each_method, SpectralPreprocessing):
                     self = self.__preprocess(each_method)
                 elif isinstance(each_method, tuple):
                     self = self.__preprocess(each_method[0], **each_method[1])

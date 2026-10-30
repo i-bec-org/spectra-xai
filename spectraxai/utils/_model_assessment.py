@@ -1,16 +1,17 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from math import sqrt
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy.stats import gaussian_kde
 
 
-def metrics(y_true: np.ndarray, y_pred: np.ndarray):
+def metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, object]:
     """Calculate accuracy metrics for regression.
 
     Returns a dictionary containing RMSE (Root Mean Squared Error), $R^2$ (coefficient
@@ -40,7 +41,12 @@ def metrics(y_true: np.ndarray, y_pred: np.ndarray):
     }
 
 
-def scatter_plot(y_true, y_pred, ax=None, use_kde=False):
+def scatter_plot(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    ax: Axes | None = None,
+    use_kde: bool = False,
+) -> Axes:
     """Create a scatter plot between observed and predicted values.
 
     Parameters
@@ -65,7 +71,7 @@ def scatter_plot(y_true, y_pred, ax=None, use_kde=False):
         The matplotlib axes with the plot
 
     """
-    if not ax:
+    if ax is None:
         plt.figure()
         ax = plt.gca()
     if use_kde:

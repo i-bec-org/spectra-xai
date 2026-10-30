@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -11,19 +11,21 @@ from spectraxai.dataset import Scale
 
 class TestScaleClass(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.n_samples = 500
-        self.n_features = 20
-        self.n_outputs = 2
-        self.X, self.Y = make_regression(
-            n_samples=self.n_samples,
-            n_features=self.n_features,
-            n_targets=self.n_outputs,
+    def setUpClass(cls) -> None:
+        cls.n_samples = 500
+        cls.n_features = 20
+        cls.n_outputs = 2
+        regression = make_regression(
+            n_samples=cls.n_samples,
+            n_features=cls.n_features,
+            n_targets=cls.n_outputs,
         )
-        self.idx_trn = np.arange(300)
-        self.idx_val = np.arange(300, self.n_samples)
+        cls.X = regression[0]
+        cls.Y = regression[1]
+        cls.idx_trn = np.arange(300)
+        cls.idx_val = np.arange(300, cls.n_samples)
 
-    def test_standard(self):
+    def test_standard(self) -> None:
         X_trn_scaled, x_scale_params, x_scale_attributes = Scale.apply(
             self.X[self.idx_trn], Scale.STANDARD
         )
@@ -36,6 +38,8 @@ class TestScaleClass(unittest.TestCase):
         Y_val_scaled = Scale.apply(
             self.Y[self.idx_val], Scale.STANDARD, y_scale_params, y_scale_attributes
         )
+        assert isinstance(X_val_scaled, np.ndarray)
+        assert isinstance(Y_val_scaled, np.ndarray)
         assert_allclose(X_trn_scaled.mean(axis=0), X_val_scaled.mean(axis=0), atol=0.35)
         assert_allclose(Y_trn_scaled.mean(axis=0), Y_val_scaled.mean(axis=0), atol=0.35)
         X_trn_original = Scale.inverse(
@@ -47,7 +51,7 @@ class TestScaleClass(unittest.TestCase):
         )
         assert_allclose(self.Y[self.idx_trn], Y_trn_original)
 
-    def test_minmax(self):
+    def test_minmax(self) -> None:
         X_trn_scaled, x_scale_params, x_scale_attributes = Scale.apply(
             self.X[self.idx_trn], Scale.MINMAX
         )
@@ -60,6 +64,8 @@ class TestScaleClass(unittest.TestCase):
         Y_val_scaled = Scale.apply(
             self.Y[self.idx_val], Scale.MINMAX, y_scale_params, y_scale_attributes
         )
+        assert isinstance(X_val_scaled, np.ndarray)
+        assert isinstance(Y_val_scaled, np.ndarray)
         assert_allclose(X_trn_scaled.mean(axis=0), X_val_scaled.mean(axis=0), atol=0.1)
         assert_allclose(Y_trn_scaled.mean(axis=0), Y_val_scaled.mean(axis=0), atol=0.1)
         X_trn_original = Scale.inverse(

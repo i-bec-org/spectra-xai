@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The module `spectraxai.models` includes classes and operations on ML models.
@@ -11,7 +11,8 @@ test multiple pre-treatment methods.
 
 import time
 from enum import Enum
-from typing import Dict, List, Union
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 import numpy as np
 import pandas
@@ -20,7 +21,6 @@ from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
-from sklearn.base import BaseEstimator
 from cubist import Cubist
 import xgboost as xgb
 
@@ -38,10 +38,10 @@ class Model(str, Enum):
     CUBIST = "Cubist"
     XGBOOST = "XGBoost"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
 
@@ -50,31 +50,39 @@ class StandardModel:
 
     model: Model
     """The type of `Model` used."""
-    init_hyperparameters: Dict
+
+    init_hyperparameters: dict[str, Any]
     """A dictionary of the hyperparameters of the models identified by an expert, to
     override a grid search."""
-    grid_search_hyperparameters: Dict
+
+    grid_search_hyperparameters: dict[str, Any]
     """A dictionary containing as keys the hyperparameters of the model and as values a
     list of the potential candidate values."""
-    best_hyperparameters: Dict
+
+    best_hyperparameters: dict[str, Any] | None
     """A dictionary of the best hyperparameters, either set externally or as identified
     after calling the train function."""
-    training_time: float
+
+    training_time: float | None
     """Training time in seconds."""
-    testing_time: float
+
+    testing_time: float | None
     """Time for the prediction in seconds."""
-    best_model: BaseEstimator
+
+    best_model: Any
     """The best optimized model after tuning the hyperparameters."""
-    best_score: float
+
+    best_score: float | None
+    scaler: StandardScaler | None
     """The best score (R2 for regression and accuracy for classification) in the
     internal validation set corresponding to the best model."""
 
     def __init__(
         self,
         model: Model,
-        init_hyperparameters: Dict = {},
-        grid_search_hyperparameters: Dict = {},
-    ):
+        init_hyperparameters: dict[str, Any] | None = None,
+        grid_search_hyperparameters: dict[str, Any] | None = None,
+    ) -> None:
         """Initialize StandardModel class for a `Model` and its hyperparameters.
 
         You need to pass either a set of hyperparameters for the model, or a range
@@ -92,7 +100,13 @@ class StandardModel:
             Specify custom grid search range for the hyperparameters
 
         """
-        if len(init_hyperparameters) != 0 and len(grid_search_hyperparameters) != 0:
+        init_hyperparameters = (
+            {} if init_hyperparameters is None else init_hyperparameters
+        )
+        grid_search_hyperparameters = (
+            {} if grid_search_hyperparameters is None else grid_search_hyperparameters
+        )
+        if init_hyperparameters and grid_search_hyperparameters:
             raise AssertionError(
                 "You cannot specify both init_hyperparameters and"
                 "grid_search_hyperparameters"
@@ -132,8 +146,9 @@ class StandardModel:
         self.testing_time = None
         self.best_model = None
         self.best_score = None
+        self.scaler = None
 
-    def __vip(self, model):
+    def __vip(self, model: PLSRegression) -> np.ndarray:
         t = model.x_scores_
         w = model.x_weights_
         q = model.y_loadings_
@@ -145,10 +160,14 @@ class StandardModel:
             weight = np.array(
                 [(w[i, j] / np.linalg.norm(w[:, j])) ** 2 for j in range(h)]
             )
-            vips[i] = np.sqrt(p * (s.T @ weight) / total_s)
+            vips[i] = np.sqrt(p * (s.ravel() @ weight) / total_s)
         return vips
 
-    def fit(self, dataset: Dataset, cv: Union[int, List] = 5):
+    def fit(
+        self,
+        dataset: Dataset,
+        cv: int | Iterable[tuple[np.ndarray, np.ndarray]] = 5,
+    ) -> None:
         """Trains the model on a given dataset.
 
         If you didn't supply the `init_hyperparameters` option to the constructor, then
@@ -264,6 +283,8 @@ class StandardModel:
             X_test = X_test.reshape(1, -1)
         tst_t0 = time.time()
         if self.model == Model.SVR:
+            if self.scaler is None:
+                raise RuntimeError("The SVR scaler is unavailable")
             X_test = self.scaler.transform(X_test)
         y_hat = self.best_model.predict(X_test)
         tst_t1 = time.time()
@@ -274,8 +295,8 @@ class StandardModel:
         self,
         dataset: Dataset,
         preprocess: SpectralPreprocessingSequence = SpectralPreprocessing.NONE,
-        idx_trn: np.ndarray = np.array([]),
-        idx_tst: np.ndarray = np.array([]),
+        idx_trn: np.ndarray | None = None,
+        idx_tst: np.ndarray | None = None,
         get_model: bool = False,
     ) -> pandas.DataFrame:
         """Train and test a model in given dataset and spectral pre-processing sequence.
@@ -310,6 +331,8 @@ class StandardModel:
             The accuracy results and assorted metadata for each output property
 
         """
+        idx_trn = np.array([]) if idx_trn is None else idx_trn
+        idx_tst = np.array([]) if idx_tst is None else idx_tst
         if idx_tst.size == 0 and idx_trn.size == 0:
             raise AssertionError(
                 "You need to specify either tst or trn indices or both"
@@ -341,6 +364,8 @@ class StandardModel:
 
         dataset = dataset.preprocess(preprocess)
         self.fit(Dataset(dataset.X[idx_trn], dataset.Y[idx_trn]))
+        if self.best_model is None or self.best_hyperparameters is None:
+            raise RuntimeError("The model failed to fit")
         y_hat = self.predict(dataset.X[idx_tst])
 
         results = []
@@ -377,9 +402,9 @@ class StandardModel:
     def fit_and_predict_multiple(
         self,
         dataset: Dataset,
-        preprocesses: List[SpectralPreprocessingSequence] = [],
-        idx_trn: np.ndarray = np.array([]),
-        idx_tst: np.ndarray = np.array([]),
+        preprocesses: Sequence[SpectralPreprocessingSequence] | None = None,
+        idx_trn: np.ndarray | None = None,
+        idx_tst: np.ndarray | None = None,
     ) -> pandas.DataFrame:
         """Train a model using different pre-treatments and predict on the test set.
 
@@ -407,6 +432,9 @@ class StandardModel:
             By default, no model is returned to keep a low memory footprint.
 
         """
+        preprocesses = [] if preprocesses is None else preprocesses
+        idx_trn = np.array([]) if idx_trn is None else idx_trn
+        idx_tst = np.array([]) if idx_tst is None else idx_tst
         if len(preprocesses) == 0:
             raise ValueError(
                 "The list of SpectralPreprocessingSequence may not be empty"

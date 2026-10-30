@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -12,8 +12,8 @@ from spectraxai.data import load_GR_SSL
 
 class TestStandardModelClass(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.models = [
+    def setUpClass(cls) -> None:
+        cls.models = [
             StandardModel(Model.PLS),
             StandardModel(Model.SVR),
             StandardModel(Model.RF),
@@ -70,7 +70,7 @@ class TestStandardModelClass(unittest.TestCase):
                 },
             ),
         ]
-        self.methods = [
+        cls.methods = [
             SpectralPreprocessing.ABS,
             (SpectralPreprocessing.SG1, {"window_length": 21, "polyorder": 3}),
             [
@@ -78,14 +78,14 @@ class TestStandardModelClass(unittest.TestCase):
                 SpectralPreprocessing.SNV,
             ],
         ]
-        self.dataset1D = load_GR_SSL()
-        self.dataset2D = load_GR_SSL(properties=["OM", "Sand_Fraction"])
-        self.idx_trn, self.idx_tst = (
+        cls.dataset1D = load_GR_SSL()
+        cls.dataset2D = load_GR_SSL(properties=["OM", "Sand_Fraction"])
+        cls.idx_trn, cls.idx_tst = (
             np.arange(200),
-            np.arange(200, self.dataset1D.n_samples),
+            np.arange(200, cls.dataset1D.n_samples),
         )
 
-    def test_wrong_params_model_constructor(self):
+    def test_wrong_params_model_constructor(self) -> None:
         self.assertRaises(
             AssertionError,
             StandardModel,
@@ -126,7 +126,7 @@ class TestStandardModelClass(unittest.TestCase):
             {"learning_rate": [0.1, 0.05]},
         )
 
-    def test_wrong_params_model_train(self):
+    def test_wrong_params_model_train(self) -> None:
         for model in self.models:
             # Neither idx_trn nor idx_tst
             self.assertRaises(AssertionError, model.fit_and_predict, self.dataset1D)
@@ -189,7 +189,7 @@ class TestStandardModelClass(unittest.TestCase):
                 self.dataset1D, self.methods, idx_trn=self.idx_trn
             )
 
-    def test_multi_output(self):
+    def test_multi_output(self) -> None:
         for model in self.models:
             if model.model in [Model.SVR, Model.CUBIST]:
                 self.assertRaises(
@@ -210,7 +210,7 @@ class TestStandardModelClass(unittest.TestCase):
                     len(model.fit_and_predict(self.dataset2D, idx_trn=self.idx_trn)), 2
                 )
 
-    def test_fit_and_predict_multiple(self):
+    def test_fit_and_predict_multiple(self) -> None:
         models = [
             StandardModel(
                 Model.PLS, grid_search_hyperparameters={"n_components": [10, 20]}
@@ -248,8 +248,8 @@ class TestStandardModelClass(unittest.TestCase):
                     self.dataset2D, self.methods, idx_tst=tst
                 )
 
-    def test_leave_one_out(self):
-        idx_trn, idx_tst = self.dataset1D.train_test_split(
+    def test_leave_one_out(self) -> None:
+        idx_trn, _ = self.dataset1D.train_test_split(
             DatasetSplit.CROSS_VALIDATION, self.dataset1D.n_samples
         )
         model = StandardModel(Model.PLS, init_hyperparameters={"n_components": 2})

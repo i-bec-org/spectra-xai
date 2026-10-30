@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -11,21 +11,21 @@ import pandas
 
 class TestSpectraClass(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.dataset = load_GR_SSL()
+    def setUpClass(cls) -> None:
+        cls.dataset = load_GR_SSL()
 
-    def test_1D_constructor(self):
+    def test_1D_constructor(self) -> None:
         spec = Spectra(self.dataset.X[0, :])
         self.assertTrue(spec.X.shape == (1, self.dataset.X.shape[1]))
 
-    def test_2D_constructor(self):
+    def test_2D_constructor(self) -> None:
         spec = Spectra(self.dataset.X)
         self.assertTrue(spec.X.shape == self.dataset.X.shape)
 
-    def test_pandas_constructor(self):
+    def test_pandas_constructor(self) -> None:
         self.assertRaises(TypeError, Spectra, pandas.DataFrame(self.dataset.X))
 
-    def test_simple_pre_treatments(self):
+    def test_simple_pre_treatments(self) -> None:
         pre_treatments = [
             SpectralPreprocessing.NONE,
             SpectralPreprocessing.ABS,
@@ -36,7 +36,7 @@ class TestSpectraClass(unittest.TestCase):
             spec = Spectra(self.dataset.X).preprocess(pre_treatment)
             self.assertTrue(spec.X.shape == self.dataset.X.shape)
 
-    def test_sg_pre_treatments(self):
+    def test_sg_pre_treatments(self) -> None:
         pre_treatments = [
             (SpectralPreprocessing.SG0, {"window_length": 21, "polyorder": 3}),
             (SpectralPreprocessing.SG1, {"window_length": 21, "polyorder": 3}),
@@ -46,7 +46,7 @@ class TestSpectraClass(unittest.TestCase):
             spec = Spectra(self.dataset.X).preprocess(pre_treatment)
             self.assertTrue(spec.X.shape == self.dataset.X.shape)
 
-    def test_reversible(self):
+    def test_reversible(self) -> None:
         spec = (
             Spectra(self.dataset.X)
             .preprocess(SpectralPreprocessing.ABS)
@@ -56,7 +56,7 @@ class TestSpectraClass(unittest.TestCase):
         spec = Spectra(self.dataset.X).absorbance().reflectance()
         assert_allclose(spec.X, self.dataset.X)
 
-    def test_sequence(self):
+    def test_sequence(self) -> None:
         spec1 = Spectra(self.dataset.X).absorbance()
         spec2 = Spectra(self.dataset.X).preprocess(SpectralPreprocessing.ABS)
         assert_allclose(spec1.X, spec2.X)

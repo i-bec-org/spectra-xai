@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 repos:
 -   repo: https://github.com/PyCQA/docformatter
-    rev: eb1df347edd128b30cd3368dddc3aa65edcfac38 # Don't autoupdate until https://github.com/PyCQA/docformatter/issues/293 is fixed
+    rev: v1.7.8
     hooks:
     - id: docformatter
       args: [
@@ -16,15 +16,15 @@ repos:
         "."
       ]
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.1
+    rev: v3.22.0
     hooks:
     - id: pyupgrade
 -   repo: https://github.com/psf/black
-    rev: 25.1.0
+    rev: 26.10.1
     hooks:
     - id: black
 -   repo: https://github.com/pycqa/flake8
-    rev: 7.1.2
+    rev: 7.4.1
     hooks:
     - id: flake8
       args: ["--max-line-length=88", "--extend-ignore=E203,E731"]
@@ -35,6 +35,7 @@ repos:
       args: ["--convention=numpy", "--add-ignore=D105"]
       files: ^spectraxai/
 -   repo: https://github.com/fsfe/reuse-tool
-    rev: v5.0.2
+    rev: v6.2.0
     hooks:
       - id: reuse-lint-file
+        exclude: ^docs/

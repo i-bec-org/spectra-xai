@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The module `spectraxai.explain` supports the interpretability analysis.
@@ -11,17 +11,20 @@ which has been trained on a given `spectraxai.dataset.Dataset`.
 """
 
 from enum import Enum
-from typing import List, Union
+from collections.abc import Sequence
+from typing import Any, cast
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.ticker as ticker
+from matplotlib.axes import Axes
+from matplotlib.ticker import AutoMinorLocator, LinearLocator, MaxNLocator
+from sklearn.utils import Bunch
 from sklearn.inspection import permutation_importance
 from sklearn.feature_selection import mutual_info_regression, f_regression
 import pandas
 import seaborn
 import sage
+from sage.core import Explanation
 
 from spectraxai.dataset import Dataset
 from spectraxai.spectra import SpectralPreprocessing
@@ -34,10 +37,10 @@ class FeatureRanking(str, Enum):
     MI = "Mutual information"
     F_STATISTIC = "F-statistic"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
 
@@ -47,7 +50,7 @@ class _Explain:
     dataset: Dataset
     """A `spectraxai.dataset.Dataset` object used to inspect and/or train the model."""
 
-    def __init__(self, dataset: Dataset):
+    def __init__(self, dataset: Dataset) -> None:
         """Initialize using a dataset.
 
         Parameters
@@ -59,7 +62,7 @@ class _Explain:
         self.dataset = dataset
         plt.style.use("seaborn-v0_8-whitegrid")
 
-    def _check_bar_array(self, array: np.ndarray):
+    def _check_bar_array(self, array: np.ndarray) -> None:
         if not array.size:
             raise ValueError("The array containing the bar values cannot be empty")
         if array.shape[0] != self.dataset.n_features:
@@ -67,10 +70,10 @@ class _Explain:
                 "The number of bars should equal the number of input features"
             )
 
-    def _stylize_plot(self, ax) -> plt.Axes:
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins="auto"))
-        ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
-        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+    def _stylize_plot(self, ax: Axes) -> Axes:
+        ax.xaxis.set_major_locator(MaxNLocator(nbins="auto"))
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.grid(which="minor", linewidth=0.6, alpha=0.3)
         ax.tick_params(direction="out", which="major", length=6, width=1)
         ax.tick_params(direction="out", which="minor", length=3, width=1)
@@ -80,10 +83,10 @@ class _Explain:
     def _bar_plot(
         self,
         height: np.ndarray,
-        yerr: np.ndarray = None,
-        ax: plt.Axes = None,
+        yerr: np.ndarray | None = None,
+        ax: Axes | None = None,
         ylabel: str = "",
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot a bar plot of the feature importance.
 
         Parameters
@@ -117,7 +120,7 @@ class _Explain:
             self._check_bar_array(yerr)
         pos = np.arange(len(height))
         ax.bar(pos, height, yerr=yerr)
-        ax.set_xticks(pos, self.dataset.X_names)
+        ax.set_xticks(pos, [str(name) for name in self.dataset.X_names])
         ax = self._stylize_plot(ax)
         ax.set_ylabel(ylabel)
         return ax
@@ -188,7 +191,7 @@ class PreHocAnalysis(_Explain):
             ]
         )
 
-    def feature_importance(self, method: FeatureRanking) -> np.ndarray:
+    def feature_importance(self, method: object) -> np.ndarray:
         """Calculate feature importance between the input features and the output(s).
 
         Parameters
@@ -215,12 +218,10 @@ class PreHocAnalysis(_Explain):
             return self._mi()
         elif method == FeatureRanking.F_STATISTIC:
             return self._f_statistic()
-        else:
-            raise NotImplementedError("This type is not yet supported")
 
     def correlogram(
         self, top: int = 5, method: FeatureRanking = FeatureRanking.CORR
-    ) -> plt.Axes:
+    ) -> np.ndarray:
         """Plot a correlogram between the most important inputs and the output(s).
 
         Parameters
@@ -239,7 +240,7 @@ class PreHocAnalysis(_Explain):
 
         """
         metric = self.feature_importance(method)
-        fig, axes = plt.subplots(
+        _, axes = plt.subplots(
             self.dataset.n_outputs, top, figsize=(11.69, 8.27), squeeze=False, dpi=200
         )
         for i, corr in enumerate(metric):
@@ -261,8 +262,8 @@ class PreHocAnalysis(_Explain):
     def bar_plot_importance(
         self,
         method: FeatureRanking = FeatureRanking.CORR,
-        ax: Union[plt.Axes, "np.ndarray[plt.Axes]"] = None,
-    ):
+        ax: Axes | np.ndarray | None = None,
+    ) -> np.ndarray:
         """Plot a bar plot of feature ranking.
 
         The feature ranking is calculated between the input features and the output(s)
@@ -285,7 +286,7 @@ class PreHocAnalysis(_Explain):
         """
         metric = self.feature_importance(method)
         if ax is None:
-            fig, ax = plt.subplots(
+            _, ax = plt.subplots(
                 self.dataset.n_outputs,
                 1,
                 figsize=(11.69, 8.27),
@@ -297,7 +298,7 @@ class PreHocAnalysis(_Explain):
             ax = ax.flatten()
         else:
             msg = "The length of the axes should equal the number of outputs"
-            if isinstance(ax, plt.Axes):
+            if isinstance(ax, Axes):
                 if self.dataset.n_outputs == 1:
                     ax = np.array([ax])
                 else:
@@ -312,42 +313,101 @@ class PreHocAnalysis(_Explain):
                 ax[i].set_xlabel("")
         return ax
 
-    def mean_spectrum(self, ax=None) -> plt.Axes:
-        r"""Plot mean spectrum $\pm$ sd of the dataset.
+    def mean_spectrum(
+        self,
+        ax: Axes | None = None,
+        excluded_bands: Sequence[tuple[float, float]] | None = None,
+    ) -> Axes:
+        r"""Plot the mean spectrum ± standard deviation of the dataset.
 
         Parameters
         ----------
-        ax: `plt.Axes`, optional
-            An optional matplotlib axes to plot into. Defaults to None,
-            in which case a new figure is created.
+        ax : Axes, optional
+            Matplotlib axes to plot into. If None, a new figure is created.
+
+        excluded_bands : sequence of tuple[float, float], optional
+            Inclusive wavelength intervals to leave blank, such as atmospheric
+            absorption bands.
 
         Returns
         -------
-        `plt.Axes`
-            The matplotlib axes with the plot
+        Axes
+            The matplotlib axes with the plot.
 
         """
         if ax is None:
-            plt.figure(figsize=(11.69, 8.27), dpi=200)
-            ax = plt.gca()
+            _, ax = plt.subplots(figsize=(11.69, 8.27), dpi=200)
 
-        df = pandas.DataFrame(data=self.dataset.X, columns=self.dataset.X_names)
+        try:
+            wavelengths = np.asarray(self.dataset.X_names, dtype=float)
+        except (TypeError, ValueError) as error:
+            raise ValueError("X_names must contain numeric wavelengths") from error
 
-        ax = seaborn.lineplot(
-            data=pandas.melt(df, var_name="Wavelength"),
-            x="Wavelength",
-            y="value",
-            errorbar="sd",
-            ax=ax,
-        )
+        if not np.isfinite(wavelengths).all():
+            raise ValueError("X_names must contain finite wavelengths")
+
+        bands = np.asarray(
+            excluded_bands if excluded_bands is not None else [],
+            dtype=float,
+        ).reshape(-1, 2)
+
+        if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
+            raise ValueError(
+                "excluded_bands must contain finite (start, end) wavelength pairs "
+                "with start <= end"
+            )
+
+        order = np.argsort(wavelengths)
+        wavelengths = wavelengths[order]
+        spectra = np.asarray(self.dataset.X)[:, order]
+
+        mean = spectra.mean(axis=0)
+        sd = spectra.std(axis=0, ddof=1)
+
+        excluded = np.zeros(wavelengths.shape, dtype=bool)
+        for start, end in bands:
+            excluded |= (wavelengths >= start) & (wavelengths <= end)
+        is_valid = ~excluded
+
+        if is_valid.any():
+            # Find indices where validity changes or use split on consecutive indices
+            valid_indices = np.flatnonzero(is_valid)
+            # Split into arrays of continuous indices (where index difference > 1)
+            split_points = np.where(np.diff(valid_indices) > 1)[0] + 1
+            segments = np.split(valid_indices, split_points)
+
+            color = None
+            for seg_idx in segments:
+                if len(seg_idx) == 0:
+                    continue
+
+                seg_x = wavelengths[seg_idx]
+                seg_mean = mean[seg_idx]
+                seg_lower = seg_mean - sd[seg_idx]
+                seg_upper = seg_mean + sd[seg_idx]
+
+                # Plot each continuous segment cleanly
+                line_plots = ax.plot(seg_x, seg_mean, color=color, lw=1.5)
+                if color is None:
+                    color = line_plots[0].get_color()
+
+                ax.fill_between(
+                    seg_x,
+                    seg_lower,
+                    seg_upper,
+                    color=color,
+                    alpha=0.2,
+                    edgecolor=None,
+                )
         return self._stylize_plot(ax)
 
     def mean_spectrum_by_range(
         self,
-        y_ranges: List,
-        preprocesses: List[SpectralPreprocessing] = [],
-        ylims: List = [],
-    ) -> plt.Axes:
+        y_ranges: Sequence[np.ndarray],
+        preprocesses: Sequence[SpectralPreprocessing] | None = None,
+        ylims: Sequence[Sequence[float]] | None = None,
+        excluded_bands: Sequence[tuple[float, float]] | None = None,
+    ) -> np.ndarray:
         """Plot the mean spectrum (across all samples) per output range.
 
         Parameters
@@ -366,6 +426,10 @@ class PreHocAnalysis(_Explain):
             If preprocesses was omitted this can be a list of length 1 to act on the
             dataset's spectra.
 
+        excluded_bands : sequence of tuple[float, float], optional
+            Inclusive wavelength intervals to leave blank, such as atmospheric
+            absorption bands.
+
         Returns
         -------
         `plt.Axes`
@@ -376,6 +440,8 @@ class PreHocAnalysis(_Explain):
             raise AssertionError(
                 "The length of y_ranges should equal the dataset's n_outputs"
             )
+        preprocesses = [] if preprocesses is None else preprocesses
+        ylims = [] if ylims is None else ylims
         if preprocesses and ylims:
             if len(preprocesses) != len(ylims):
                 raise AssertionError(
@@ -383,7 +449,19 @@ class PreHocAnalysis(_Explain):
                 )
         if not preprocesses:
             preprocesses = [SpectralPreprocessing.NONE]
-        fig, axes = plt.subplots(
+
+        bands = np.asarray(
+            excluded_bands if excluded_bands is not None else [],
+            dtype=float,
+        ).reshape(-1, 2)
+
+        if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
+            raise ValueError(
+                "excluded_bands must contain finite (start, end) wavelength pairs "
+                "with start <= end"
+            )
+
+        _, axes = plt.subplots(
             self.dataset.n_outputs,
             1,
             figsize=(11.69, 8.27 * self.dataset.n_outputs),
@@ -409,19 +487,37 @@ class PreHocAnalysis(_Explain):
             for j in range(len(preprocesses)):
                 groupedPerProp = (
                     dfs[j]
-                    .groupby(pandas.cut(dfs[j][y_name], y_ranges[i]))
+                    .groupby(pandas.cut(dfs[j][y_name], y_ranges[i].tolist()))
                     .mean()
                     .drop(columns=self.dataset.Y_names)
                 )
                 groupedPerProp.index = groupedPerProp.index.astype(str)
                 plot_ax = ax if j == 0 else ax.twinx()
+
+                wavelengths = np.asarray(groupedPerProp.columns, dtype=float)
+
+                # Compute excluded mask based on bands
+                excluded = np.zeros(wavelengths.shape, dtype=bool)
+                for start, end in bands:
+                    excluded |= (wavelengths >= start) & (wavelengths <= end)
+
                 for k in range(len(y_ranges[i]) - 1):
-                    x = groupedPerProp.columns
-                    y = groupedPerProp.iloc[k].to_numpy()
+                    y = groupedPerProp.iloc[k].to_numpy().copy()
+
+                    # Mask out excluded bands and invalid points using NaN so lines
+                    # break cleanly without messing up the underlying axis structure
+                    # or grid lines.
+                    y[excluded | ~np.isfinite(wavelengths)] = np.nan
+
                     plot_ax.plot(
-                        x, y, label=groupedPerProp.index[k], linewidth=2, c=cmap[k]
+                        wavelengths,
+                        y,
+                        label=groupedPerProp.index[k],
+                        linewidth=2,
+                        c=cmap[k],
                     )
-                    plot_ax.yaxis.set_major_locator(ticker.LinearLocator(5))
+                    plot_ax.yaxis.set_major_locator(LinearLocator(5))
+
                 if j > 0:
                     plot_ax.grid(None)
                 if ylims:
@@ -433,7 +529,7 @@ class PreHocAnalysis(_Explain):
                 groupedPerProp.index,
                 frameon=True,
                 loc="best",
-                ncol=int(len(y_ranges[i]) / 4),
+                ncol=int(len(y_ranges[i]) / 4) if len(y_ranges[i]) >= 4 else 1,
                 title=y_name,
             )
 
@@ -444,8 +540,8 @@ class PostHocAnalysis(_Explain):
     """A class to provide methods for post-hoc explainability analysis."""
 
     def bar_plot_importance(
-        self, importance: np.ndarray, ax: plt.Axes = None
-    ) -> plt.Axes:
+        self, importance: np.ndarray, ax: Axes | None = None
+    ) -> Axes:
         """Plot a bar plot of the feature importance.
 
         Parameters
@@ -464,11 +560,11 @@ class PostHocAnalysis(_Explain):
             The matplotlib axes with the plot
 
         """
-        return self._bar_plot(height=importance, ax=None, ylabel="Importance")
+        return self._bar_plot(height=importance, ax=ax, ylabel="Importance")
 
     def circular_bar_plot_importance(
-        self, importance: np.ndarray, ax: plt.Axes = None, top: int = None
-    ) -> plt.Axes:
+        self, importance: np.ndarray, ax: Axes | None = None, top: int | None = None
+    ) -> Axes:
         """Plot a circular (spiral) bar plot of the feature importance.
 
         Parameters
@@ -539,7 +635,7 @@ class PostHocAnalysis(_Explain):
         )
 
         # Add labels
-        for bar, angle, height, label in zip(bars, angles, heights, df["Name"]):
+        for bar, angle, _, label in zip(bars, angles, heights, df["Name"]):
 
             # Labels are rotated. Rotation must be specified in degrees :(
             rotation = np.rad2deg(angle)
@@ -566,8 +662,8 @@ class PostHocAnalysis(_Explain):
         return ax
 
     def bar_plot_permutation_importance(
-        self, model, dataset: Dataset = None, ax: plt.axes = None
-    ):
+        self, model: Any, dataset: Dataset | None = None, ax: Axes | None = None
+    ) -> Axes:
         """Create a bar plot using permutation feature importance.
 
         Parameters
@@ -592,15 +688,20 @@ class PostHocAnalysis(_Explain):
         """
         if dataset is None:
             dataset = self.dataset
-        result = permutation_importance(
-            model, dataset.X, dataset.Y, n_repeats=10, n_jobs=-1
+        result = cast(
+            Bunch,
+            permutation_importance(
+                model, dataset.X, dataset.Y, n_repeats=10, n_jobs=-1
+            ),
         )
-        ax = self._bar_plot(height=result.importances_mean, yerr=result.importances_std)
+        ax = self._bar_plot(
+            height=result.importances_mean, yerr=result.importances_std, ax=ax
+        )
         ax.set_title("Feature importances using permutation")
         ax.set_ylabel("Mean decrease in impurity")
         return ax
 
-    def sage_importance(self, model):
+    def sage_importance(self, model: Any) -> Explanation:
         """Calculate SAGE based importance.
 
         SAGE (Shapley Additive Global importancE) is a game-theoretic approach for

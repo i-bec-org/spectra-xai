@@ -1,34 +1,27 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from pathlib import Path
 
-# To use a consistent encoding
-from codecs import open
-from os import path
+from setuptools import find_packages, setup
 
-# The directory containing this file
-HERE = path.abspath(path.dirname(__file__))
-
-# Get the long description from the README file
-with open(path.join(HERE, "README.md"), encoding="utf-8") as f:
-    long_description = f.read()
+HERE = Path(__file__).parent
+long_description = (HERE / "README.md").read_text(encoding="utf-8")
 
 # This call to setup() does all the work
 setup(
     name="spectraxai",
-    version="1.0.0",
+    version="1.1.0",
     packages=find_packages(
         include=["spectraxai", "spectraxai.utils", "spectraxai.data"]
     ),
-    python_requires=">=3.9",
+    python_requires=">=3.13",
     install_requires=[
         "pandas",
-        "numpy<2.0.0",
+        "numpy",
         "scipy",
-        "scikit-learn==1.5.2",
+        "scikit-learn>=1.5.2",
         "matplotlib",
         "cubist>=0.1.0",
         "seaborn",
@@ -50,5 +43,6 @@ setup(
             "pre-commit",
         ]
     },
+    package_data={"spectraxai": ["py.typed"]},
     include_package_data=True,
 )

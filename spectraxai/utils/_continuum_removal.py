@@ -1,12 +1,15 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import numpy as np
 from scipy.spatial import ConvexHull
+from collections.abc import Sequence
 
 
-def continuum_removal(spectrum: np.ndarray, wvs: list = []):
+def continuum_removal(
+    spectrum: np.ndarray, wvs: Sequence[float] | None = None
+) -> np.ndarray:
     """Calculate the continuum removal pre-treatment.
 
     Parameters
@@ -25,8 +28,10 @@ def continuum_removal(spectrum: np.ndarray, wvs: list = []):
     """
     assert spectrum.ndim == 1 or spectrum.ndim == 2
 
-    if len(wvs) == 0:
+    if wvs is None or len(wvs) == 0:
         wvs = list(range(len(spectrum)))
+    else:
+        wvs = list(wvs)
 
     if spectrum.ndim == 2:
         return np.array([continuum_removal(s) for s in spectrum])

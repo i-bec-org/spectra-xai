@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Nikos Tsakiridis <tsakirin@auth.gr>
+# SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Utility functions for the Support Vector Regression algorithm.
@@ -13,7 +13,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 
-def sigest(x, frac=0.5, scale=True):
+def sigest(x: np.ndarray, frac: float = 0.5, scale: bool = True) -> np.ndarray:
     r"""Estimate SVM/SVR $\gamma$ based on 0.1 - 0.9 quantile of $||x-x'||^2$.
 
     Based on sigest function of kernlab. More details may be found here:
@@ -45,7 +45,7 @@ def sigest(x, frac=0.5, scale=True):
     return 1 / np.quantile(dist[np.nonzero(dist)], q=[0.9, 0.5, 0.1])
 
 
-def estimate_C(y):
+def estimate_C(y: np.ndarray) -> float:
     r"""Estimate SVR C from $\max{(|\overline{y}-3\sigma_y|,|\overline{y}+3\sigma_y|)}$.
 
     Rule-of-thumb from dx.doi.org/10.1016/S0893-6080(03)00169-2, Eq. 13.
@@ -66,7 +66,12 @@ def estimate_C(y):
     return max(abs(ymean - 3 * ysigma), abs(ymean + 3 * ysigma))
 
 
-def estimate_epsilon(X, Y, ndegree=5, half_features=False):
+def estimate_epsilon(
+    X: np.ndarray,
+    Y: np.ndarray,
+    ndegree: int = 5,
+    half_features: bool = False,
+) -> float:
     r"""Estimate SVR $\epsilon$ based on the noise variance.
 
     See Equations 17 and 22 of https://dx.doi.org/10.1016/S0893-6080(03)00169-2.
