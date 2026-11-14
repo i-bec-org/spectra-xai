@@ -17,7 +17,7 @@ dependencies = [
     "pandas",
     "numpy",
     "scipy",
-    "scikit-learn>=1.5.2",
+    "scikit-learn>=1.6",
     "matplotlib",
     "cubist>=0.1.0",
     "seaborn",

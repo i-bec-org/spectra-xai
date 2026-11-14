@@ -74,6 +74,16 @@ class _Explain:
         self.dataset = dataset
         self.random_state = random_state
 
+    def _wavelengths(self) -> np.ndarray:
+        """The dataset's wavelengths, or an error if they are unknown."""
+        wavelengths = self.dataset.wavelengths
+        if wavelengths is None:
+            raise SpectraXAIValueError(
+                "The dataset has no wavelengths: X_names must contain finite numeric "
+                "wavelengths, or pass wavelengths= to Dataset"
+            )
+        return wavelengths
+
     def _check_bar_array(self, array: np.ndarray) -> None:
         if not array.size:
             raise SpectraXAIValueError(
@@ -396,15 +406,7 @@ class PreHocAnalysis(_Explain):
 
         """
 
-        try:
-            wavelengths = np.asarray(self.dataset.X_names, dtype=float)
-        except (TypeError, ValueError) as error:
-            raise SpectraXAIValueError(
-                "X_names must contain numeric wavelengths"
-            ) from error
-
-        if not np.isfinite(wavelengths).all():
-            raise SpectraXAIValueError("X_names must contain finite wavelengths")
+        wavelengths = self._wavelengths()
 
         bands = np.asarray(
             excluded_bands if excluded_bands is not None else [],
@@ -578,7 +580,7 @@ class PreHocAnalysis(_Explain):
                 groupedPerProp.index = groupedPerProp.index.astype(str)
                 plot_ax = ax if j == 0 else ax.twinx()
 
-                wavelengths = np.asarray(groupedPerProp.columns, dtype=float)
+                wavelengths = self._wavelengths()
 
                 # Compute excluded mask based on bands
                 excluded = np.zeros(wavelengths.shape, dtype=bool)
