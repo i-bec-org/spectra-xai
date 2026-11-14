@@ -919,3 +919,271 @@ class PostHocAnalysis(_Explain):
 
         # Calculate SAGE values
         return estimator(self.dataset.X, self.dataset.Y)
+
+    def _importance_array(self, importance: Any) -> np.ndarray:
+        """Accept an importance array or a fitted `StandardModel`."""
+        if hasattr(importance, "feature_importance"):
+            values, _ = importance.feature_importance()
+            if values is None:
+                raise SpectraXAIValueError(
+                    "The model has no feature importance of its own; pass an array "
+                    "(e.g. from fit_and_predict(..., return_permutation_importance="
+                    "True))"
+                )
+            importance = values
+        importance = np.asarray(importance, dtype=float).ravel()
+        self._check_bar_array(importance)
+        return importance
+
+    @_styled_unless("ax")
+    def plot_importance_spectrum(
+        self,
+        importance: Any,
+        ax: Axes | None = None,
+        excluded_bands: Sequence[tuple[float, float]] | None = None,
+        **kwargs: Any,
+    ) -> tuple[Axes, Axes]:
+        """Overlay the feature importance on the mean spectrum ± SD.
+
+        The mean spectrum is drawn on ``ax`` and the importance on a second y axis
+        sharing the wavelength axis, as commonly shown in spectroscopy papers.
+
+        Parameters
+        ----------
+        importance: `np.ndarray` or fitted `spectraxai.models.StandardModel`
+            The importance of each feature (e.g. the ``feature_importance`` column
+            of `spectraxai.models.StandardModel.fit_and_predict`), or a fitted
+            model whose own importance is used.
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        excluded_bands: sequence of tuple[float, float], optional
+            Wavelength intervals to leave blank (see `mean_spectrum`).
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.plot` for the importance line (e.g.
+            ``color``); the area under it is filled with the same color.
+
+        Returns
+        -------
+        `tuple` of `plt.Axes`
+            ``(ax, importance_ax)``: the axes with the mean spectrum and the twin
+            axes with the importance.
+
+        """
+        importance = self._importance_array(importance)
+        wavelengths = self._wavelengths()
+        ax = self.mean_spectrum(
+            ax=ax, excluded_bands=excluded_bands, color="0.35", label="Mean ± SD"
+        )
+        ax.set_ylabel("Spectrum")
+        importance_ax = ax.twinx()
+        importance_ax.grid(False)
+        order = np.argsort(wavelengths)
+        line_kwargs = {
+            "color": "tab:red",
+            "linewidth": 1.5,
+            "label": "Importance",
+            **normalize_kwargs(kwargs, Line2D),
+        }
+        (line,) = importance_ax.plot(
+            wavelengths[order], importance[order], **line_kwargs
+        )
+        importance_ax.fill_between(
+            wavelengths[order],
+            0,
+            importance[order],
+            color=line.get_color(),
+            alpha=0.2,
+            linewidth=0,
+        )
+        importance_ax.set_ylabel("Importance")
+        return ax, importance_ax
+
+    @_styled_unless("ax")
+    def plot_pls_coefficients(
+        self, model: Any, ax: Axes | None = None, **kwargs: Any
+    ) -> Axes:
+        """Plot the regression coefficients of a fitted PLS model per wavelength.
+
+        Parameters
+        ----------
+        model: fitted `spectraxai.models.StandardModel` or `PLSRegression`
+            A PLS model trained on this dataset's features.
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.plot` (one line per output).
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+
+        """
+        estimator = getattr(model, "best_model", model)
+        coef = getattr(estimator, "coef_", None)
+        if coef is None or not hasattr(estimator, "x_weights_"):
+            raise SpectraXAIValueError("model should be a fitted PLS model")
+        coef = np.atleast_2d(np.asarray(coef, dtype=float))
+        if coef.shape[1] != self.dataset.n_features:
+            coef = coef.T
+        if coef.shape[1] != self.dataset.n_features:
+            raise SpectraXAIValueError(
+                "The model was not trained on this dataset's features"
+            )
+        wavelengths = self._wavelengths()
+        order = np.argsort(wavelengths)
+        if ax is None:
+            _, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
+        names = (
+            self.dataset.Y_names
+            if coef.shape[0] == self.dataset.n_outputs
+            else [f"Y{i + 1}" for i in range(coef.shape[0])]
+        )
+        for row, name in zip(coef, names):
+            ax.plot(wavelengths[order], row[order], **{"label": name, **kwargs})
+        ax.axhline(0, color="0.3", linewidth=0.8)
+        self._stylize_plot(ax)
+        ax.set_ylabel("PLS coefficient")
+        if coef.shape[0] > 1:
+            ax.legend(frameon=True)
+        return ax
+
+    @_styled_unless("ax")
+    def plot_sage_importance(
+        self, explanation: Any, ax: Axes | None = None, **kwargs: Any
+    ) -> Axes:
+        """Bar plot of SAGE values with their standard deviation as error bars.
+
+        Parameters
+        ----------
+        explanation: SAGE `Explanation` or fitted model
+            The result of `sage_importance`, or a fitted model to explain (then
+            `sage_importance` is called; this can be slow).
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar`.
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+
+        """
+        if not hasattr(explanation, "values"):
+            explanation = self.sage_importance(explanation)
+        values = np.asarray(explanation.values, dtype=float).ravel()
+        std = getattr(explanation, "std", None)
+        yerr = None if std is None else np.asarray(std, dtype=float).ravel()
+        ax = self._bar_plot(height=values, yerr=yerr, ax=ax, **kwargs)
+        ax.set_ylabel("SAGE value")
+        return ax
+
+    def shap_importance(
+        self,
+        model: Any,
+        X: np.ndarray | None = None,
+        background: int | np.ndarray = 50,
+        max_evals: int | None = None,
+    ) -> Any:
+        """Calculate SHAP values with the model-agnostic permutation explainer.
+
+        Requires the optional dependency ``shap`` (``pip install spectraxai[shap]``).
+
+        Parameters
+        ----------
+        model: object
+            The fitted model (e.g. a `spectraxai.models.StandardModel`), used through
+            its ``predict`` method.
+
+        X: `np.ndarray`, optional
+            The samples to explain. Defaults to the dataset's inputs.
+
+        background: `int` or `np.ndarray`, optional
+            The background samples that "remove" features, or how many dataset
+            samples to draw for it. Defaults to 50.
+
+        max_evals: `int`, optional
+            Model evaluations per explained sample. Defaults to
+            ``2 * n_features + 1``, the minimum of the permutation explainer.
+
+        Returns
+        -------
+        `shap.Explanation`
+            The SHAP values, of shape (n_samples, n_features) for a single output
+            (with a trailing outputs axis for several).
+
+        """
+        try:
+            import shap
+        except ImportError as error:  # pragma: no cover - depends on the extra
+            raise ImportError(
+                "SHAP is an optional dependency: pip install spectraxai[shap]"
+            ) from error
+        X = self.dataset.X if X is None else np.asarray(X)
+        if isinstance(background, int):
+            rng = np.random.default_rng(self.random_state)
+            size = min(background, self.dataset.n_samples)
+            background = self.dataset.X[
+                rng.choice(self.dataset.n_samples, size, replace=False)
+            ]
+        explainer = shap.Explainer(
+            model.predict,
+            shap.maskers.Independent(background, max_samples=len(background)),
+            algorithm="permutation",
+            feature_names=[str(name) for name in self.dataset.X_names],
+            seed=self.random_state,
+        )
+        evals = 2 * self.dataset.n_features + 1 if max_evals is None else max_evals
+        return explainer(X, max_evals=evals, silent=True)
+
+    @_styled_unless("ax")
+    def plot_shap_summary(
+        self,
+        explanation: Any,
+        ax: Axes | None = None,
+        output: int = 0,
+        **kwargs: Any,
+    ) -> Axes:
+        """Bar plot of the mean absolute SHAP value of every wavelength.
+
+        Parameters
+        ----------
+        explanation: `shap.Explanation` or fitted model
+            The result of `shap_importance`, or a fitted model to explain (then
+            `shap_importance` is called with its defaults).
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        output: `int`, optional
+            Which output to show, for multi-output models. Defaults to 0.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar`.
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+
+        """
+        if not hasattr(explanation, "values"):
+            explanation = self.shap_importance(explanation)
+        values = np.asarray(explanation.values, dtype=float)
+        if values.ndim == 3:
+            values = values[:, :, output]
+        ax = self._bar_plot(height=np.abs(values).mean(axis=0), ax=ax, **kwargs)
+        ax.set_ylabel("mean(|SHAP value|)")
+        return ax

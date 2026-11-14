@@ -21,6 +21,11 @@ from sklearn.base import BaseEstimator, RegressorMixin, clone
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
+from sklearn.linear_model import ElasticNet, Lasso, Ridge
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import r2_score
 from sklearn.model_selection import GridSearchCV
@@ -45,6 +50,13 @@ class Model(str, Enum):
     RF = "Random Forest"
     CUBIST = "Cubist"
     XGBOOST = "XGBoost"
+    RIDGE = "Ridge Regression"
+    LASSO = "Lasso Regression"
+    ELASTIC_NET = "Elastic Net"
+    KNN = "k-Nearest Neighbours"
+    GPR = "Gaussian Process Regression"
+    """With a scaled RBF kernel plus white noise, tuned by marginal likelihood."""
+    MLP = "Multi-layer Perceptron"
     CUSTOM = "Custom estimator"
     """Any scikit-learn compatible regressor, passed as ``estimator``."""
 
@@ -75,9 +87,33 @@ _DEFAULT_GRIDS: dict[Model, dict[str, Any]] = {
         "colsample_bytree": [0.3, 0.6],
         "alpha": [0, 10],
     },
+    Model.RIDGE: {"alpha": np.logspace(-4, 3, 8)},
+    Model.LASSO: {"alpha": np.logspace(-5, 0, 6)},
+    Model.ELASTIC_NET: {"alpha": np.logspace(-5, 0, 6), "l1_ratio": [0.1, 0.5, 0.9]},
+    Model.KNN: {"n_neighbors": [3, 5, 7, 9, 15], "weights": ["uniform", "distance"]},
+    Model.MLP: {
+        "hidden_layer_sizes": [(50,), (100,), (50, 50)],
+        "alpha": [1e-4, 1e-2, 1.0],
+    },
 }
 """Default grid searched per model (PLS n_components and SVR gamma depend on the
-dataset and are added at fit time)."""
+dataset and are added at fit time; GPR tunes its kernel itself)."""
+
+_SCALED_MODELS = frozenset(
+    {
+        Model.SVR,
+        Model.RIDGE,
+        Model.LASSO,
+        Model.ELASTIC_NET,
+        Model.KNN,
+        Model.GPR,
+        Model.MLP,
+    }
+)
+"""Models whose inputs are standardized (the scaler is part of `pipeline_`). For
+the linear models this makes the coefficients comparable across wavelengths."""
+
+_SINGLE_OUTPUT_MODELS = frozenset({Model.SVR, Model.CUBIST})
 
 
 def _is_default_grid(model: Model, grid: dict[str, Any]) -> bool:
@@ -142,7 +178,8 @@ class StandardModel(RegressorMixin, BaseEstimator):
     model. Only available after a grid search."""
 
     scaler: StandardScaler | None
-    """The scaler fitted on the training inputs (used by SVR only)."""
+    """The scaler fitted on the training inputs (SVR, the linear models, KNN, GPR
+    and MLP standardize their inputs)."""
 
     random_state: int | None
     """Seed passed to stochastic models (RF, XGBoost, Cubist) and to the SVR gamma
@@ -246,7 +283,7 @@ class StandardModel(RegressorMixin, BaseEstimator):
 
     def __sklearn_tags__(self) -> Any:
         tags = super().__sklearn_tags__()
-        tags.target_tags.multi_output = self.model not in (Model.SVR, Model.CUBIST)
+        tags.target_tags.multi_output = self.model not in _SINGLE_OUTPUT_MODELS
         tags.target_tags.single_output = True
         return tags
 
@@ -272,6 +309,19 @@ class StandardModel(RegressorMixin, BaseEstimator):
             if self.random_state is not None:
                 return xgb.XGBRegressor(random_state=self.random_state)
             return xgb.XGBRegressor(seed=2000) if grid_search else xgb.XGBRegressor()
+        elif self.model == Model.RIDGE:
+            return Ridge()
+        elif self.model == Model.LASSO:
+            return Lasso(max_iter=10000, **seeded)
+        elif self.model == Model.ELASTIC_NET:
+            return ElasticNet(max_iter=10000, **seeded)
+        elif self.model == Model.KNN:
+            return KNeighborsRegressor()
+        elif self.model == Model.GPR:
+            kernel = ConstantKernel() * RBF(length_scale=10.0) + WhiteKernel()
+            return GaussianProcessRegressor(kernel=kernel, normalize_y=True, **seeded)
+        elif self.model == Model.MLP:
+            return MLPRegressor(max_iter=2000, **seeded)
         elif self.model == Model.CUSTOM:
             return clone(self.estimator)
         raise SpectraXAIValueError(f"Unsupported model: {self.model!r}")
@@ -288,6 +338,12 @@ class StandardModel(RegressorMixin, BaseEstimator):
             "colsample_bytree",
             "alpha",
         ],
+        Model.RIDGE: ["alpha"],
+        Model.LASSO: ["alpha"],
+        Model.ELASTIC_NET: ["alpha", "l1_ratio"],
+        Model.KNN: ["n_neighbors", "weights"],
+        Model.GPR: [],
+        Model.MLP: ["hidden_layer_sizes", "alpha"],
         Model.CUSTOM: [],
     }
     """Hyperparameters reported as columns by `fit_and_predict`, per model."""
@@ -322,8 +378,9 @@ class StandardModel(RegressorMixin, BaseEstimator):
             ``(importance, method)``: VIP scores for PLS (``"VIP"``),
             ``feature_importances_`` for RF (``"impurity"``), Cubist (``"usage"``),
             XGBoost (its ``importance_type``, ``"gain"`` by default) and custom
-            estimators (``"native"``), absolute coefficients for linear custom
-            estimators (``"coef"``), or ``(None, None)`` when the model has none
+            estimators (``"native"``), absolute coefficients for Ridge, Lasso,
+            Elastic Net (on standardized inputs) and linear custom estimators
+            (``"coef"``), or ``(None, None)`` when the model has none
             (e.g. SVR; see ``return_permutation_importance`` in
             `fit_and_predict`).
 
@@ -409,15 +466,15 @@ class StandardModel(RegressorMixin, BaseEstimator):
             cv, y = y, None
         dataset = self._as_dataset(dataset, y)
         cv = self.cv if cv is None else cv
-        if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
+        if self.model in _SINGLE_OUTPUT_MODELS and dataset.n_outputs > 1:
             raise SpectraXAIValueError(
                 "Cannot create a multi-output model. "
                 "Please train a model for each output property."
             )
         self.n_features_in_ = dataset.n_features
 
-        # Scale the data for SVR
-        if self.model == Model.SVR:
+        # Standardize the inputs of scale-sensitive models
+        if self.model in _SCALED_MODELS:
             self.scaler = StandardScaler()
             self.scaler.fit(dataset.X)
             X_train = np.asarray(self.scaler.transform(dataset.X))

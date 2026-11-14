@@ -88,6 +88,24 @@ All notable changes to this project are documented here. See
   (`train_test_split(DatasetSplit.CLHS, 0.8, random_state=...,
   clhs_iterations=..., clhs_components=...)`).
 
+- **New models**: `Model.RIDGE`, `LASSO`, `ELASTIC_NET`, `KNN`, `GPR` (scaled RBF
+  plus white-noise kernel, tuned by marginal likelihood) and `MLP`, each with a
+  default grid. They all standardize their inputs (the scaler is part of
+  `pipeline_`) and support several outputs; the linear models report their
+  absolute standardized coefficients as feature importance (`"coef"`).
+- **New explanation plots** on `PostHocAnalysis` (all following the plotting
+  contract):
+  - `plot_importance_spectrum(importance_or_model, ax=...)`: importance on a twin
+    axis over the mean spectrum ± SD; returns `(ax, importance_ax)`.
+  - `plot_pls_coefficients(model, ax=...)`: PLS regression coefficients per
+    wavelength, one line per output.
+  - `plot_sage_importance(explanation_or_model, ax=...)`: SAGE values with their
+    standard deviation as error bars.
+- **Optional SHAP support** (`pip install spectraxai[shap]`):
+  `PostHocAnalysis.shap_importance(model, X=None, background=50)` (model-agnostic
+  permutation explainer) and `plot_shap_summary(explanation_or_model, ax=...)`
+  (mean |SHAP| per wavelength).
+
 ### Changed (models)
 - `fit_and_predict` fits the pre-processing on the training samples and applies
   it to the test samples. For stateless pre-processing the results are identical
