@@ -3,12 +3,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from math import sqrt
+from typing import Any
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy.stats import gaussian_kde
+
+from spectraxai.plotting import _styled_unless
 
 
 def metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, object]:
@@ -41,21 +44,24 @@ def metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, object]:
     }
 
 
+@_styled_unless("ax")
 def scatter_plot(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     ax: Axes | None = None,
     use_kde: bool = False,
+    **kwargs: Any,
 ) -> Axes:
     """Create a scatter plot between observed and predicted values.
 
     Parameters
     ----------
     y_true: `np.ndarray`
-        A 1D vector of the true output (also known as observed)
+        A 1D vector (or a single column) of the true output (also known as
+        observed)
 
     y_pred: `np.ndarray`
-        A 1D vector of the predicted output (e.g., by a model)
+        A 1D vector (or a single column) of the predicted output (e.g., by a model)
 
     ax: `plt.Axes`, optional
         An optional matplotlib axes to plot into. Defaults to None, in which
@@ -65,21 +71,27 @@ def scatter_plot(
         If True, also plot a kernel density estimation. Helpful when many
         samples are present. Default value is False.
 
+    **kwargs
+        Passed on to `matplotlib.axes.Axes.scatter` (e.g. ``s`` or ``color``).
+
     Returns
     -------
     `plt.Axes`
         The matplotlib axes with the plot
 
     """
+    y_true, y_pred = np.ravel(y_true), np.ravel(y_pred)
+    if y_true.shape != y_pred.shape:
+        raise ValueError("y_true and y_pred should have the same number of samples")
     if ax is None:
-        plt.figure()
-        ax = plt.gca()
+        _, ax = plt.subplots()
     if use_kde:
         xy = np.vstack([y_true, y_pred])
         z = gaussian_kde(xy)(xy)
-        ax.scatter(y_true, y_pred, c=z, s=2, cmap="YlOrRd_r", rasterized=True)
+        scatter_kwargs = {"c": z, "s": 2, "cmap": "YlOrRd_r", "rasterized": True}
     else:
-        ax.scatter(y_true, y_pred, alpha=0.5)
+        scatter_kwargs = {"alpha": 0.5}
+    ax.scatter(y_true, y_pred, **{**scatter_kwargs, **kwargs})
     y_min = min(min(y_true), min(y_pred))
     y_max = max(max(y_true), max(y_pred))
     ax.set_xlim(y_min, y_max)

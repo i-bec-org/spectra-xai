@@ -24,6 +24,31 @@ All notable changes to this project are documented here. See
   pre-processing sequence (single members, members with options, nested lists,
   names or values), e.g. the `pre_process` column of `fit_and_predict`.
 
+- **Plotting contract** (`spectraxai.plotting`). Every plot accepts axes to draw
+  into, returns what it drew on, forwards extra keyword arguments to its main
+  matplotlib call, and never changes global matplotlib state:
+  - `PreHocAnalysis.correlogram(..., axes=)` and
+    `PreHocAnalysis.mean_spectrum_by_range(..., axes=)` are new (keyword-only).
+  - `**kwargs` on `PreHocAnalysis.bar_plot_importance`, `correlogram`,
+    `mean_spectrum`, `mean_spectrum_by_range`, `PostHocAnalysis.bar_plot_importance`,
+    `circular_bar_plot_importance`, `bar_plot_permutation_importance` and
+    `utils.scatter_plot` (e.g. `color=`, `lw=`, `s=`, `label=`).
+  - `spectraxai.plotting.style()` context manager to apply the library's look to
+    your own figures.
+  - Multi-output plots accept axes in any shape (e.g. from `plt.subplots(1, 2)`).
+
+### Changed (plots)
+- Constructing `PreHocAnalysis` / `PostHocAnalysis` no longer calls
+  `plt.style.use("seaborn-v0_8-whitegrid")` globally. Figures the library creates
+  are still drawn in that style; to keep it for your own figures use
+  `with spectraxai.plotting.style():` (or call `plt.style.use` yourself).
+- Plots drawn into axes you supply keep your style; `correlogram` only calls
+  `tight_layout` on figures it created.
+- `circular_bar_plot_importance` no longer hides the frame of whatever axes was
+  current; it raises if the supplied `ax` is not polar.
+- `utils.scatter_plot` accepts `(n, 1)` columns (e.g. PLS predictions) and is
+  styled like the other plots when it creates the figure.
+
 ### Fixed
 These fixes may change numeric results compared to 1.1.0.
 - **Grid search state leaked between fits.** `StandardModel.fit` stored the

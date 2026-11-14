@@ -17,6 +17,9 @@ from typing import Any, cast
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.cbook import normalize_kwargs
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib.ticker import AutoMinorLocator, LinearLocator, MaxNLocator
 from sklearn.utils import Bunch
 from sklearn.inspection import permutation_importance
@@ -28,6 +31,7 @@ from sage.core import Explanation
 
 from spectraxai.dataset import Dataset
 from spectraxai.exceptions import SpectraXAIValueError
+from spectraxai.plotting import DPI, FIGSIZE, _as_axes_array, _styled_unless
 from spectraxai.spectra import SpectralPreprocessing
 
 
@@ -69,7 +73,6 @@ class _Explain:
         """
         self.dataset = dataset
         self.random_state = random_state
-        plt.style.use("seaborn-v0_8-whitegrid")
 
     def _check_bar_array(self, array: np.ndarray) -> None:
         if not array.size:
@@ -97,6 +100,7 @@ class _Explain:
         yerr: np.ndarray | None = None,
         ax: Axes | None = None,
         ylabel: str = "",
+        **kwargs: Any,
     ) -> Axes:
         """Plot a bar plot of the feature importance.
 
@@ -117,20 +121,22 @@ class _Explain:
         ylabel: str, optional
             The label of the y axis
 
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar`.
+
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
 
         """
-        if ax is None:
-            plt.figure(figsize=(11.69, 8.27), dpi=200)
-            ax = plt.gca()
         self._check_bar_array(height)
         if yerr is not None:
             self._check_bar_array(yerr)
+        if ax is None:
+            _, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
         pos = np.arange(len(height))
-        ax.bar(pos, height, yerr=yerr)
+        ax.bar(pos, height, yerr=yerr, **kwargs)
         ax.set_xticks(pos, [str(name) for name in self.dataset.X_names])
         ax = self._stylize_plot(ax)
         ax.set_ylabel(ylabel)
@@ -243,8 +249,14 @@ class PreHocAnalysis(_Explain):
             return self._f_statistic()
         raise SpectraXAIValueError(f"Unsupported feature ranking: {method!r}")
 
+    @_styled_unless("axes")
     def correlogram(
-        self, top: int = 5, method: FeatureRanking = FeatureRanking.CORR
+        self,
+        top: int = 5,
+        method: FeatureRanking = FeatureRanking.CORR,
+        *,
+        axes: np.ndarray | Axes | None = None,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Plot a correlogram between the most important inputs and the output(s).
 
@@ -257,22 +269,40 @@ class PreHocAnalysis(_Explain):
             The method to calculate the feature importance.
             Defaults to FeatureRanking.CORR.
 
+        axes: array of `plt.Axes`, optional
+            ``n_outputs * top`` axes to draw into (any shape; read row by row, one
+            row per output). Defaults to None, in which case a new figure is created.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.scatter`.
+
         Returns
         -------
-        `plt.Axes`
-            The matplotlib axes with the plot
+        `np.ndarray`
+            A 2-D array of shape (`n_outputs`, `top`) with the matplotlib axes
 
         """
+        if not 1 <= top <= self.dataset.n_features:
+            raise SpectraXAIValueError(
+                "top should be between 1 and the number of input features"
+            )
         metric = self.feature_importance(method)
-        _, axes = plt.subplots(
-            self.dataset.n_outputs, top, figsize=(11.69, 8.27), squeeze=False, dpi=200
-        )
+        created = axes is None
+        if axes is None:
+            _, axes = plt.subplots(
+                self.dataset.n_outputs, top, figsize=FIGSIZE, squeeze=False, dpi=DPI
+            )
+        else:
+            axes = _as_axes_array(
+                axes, self.dataset.n_outputs * top, "n_outputs * top"
+            ).reshape(self.dataset.n_outputs, top)
+        scatter_kwargs = {"s": 4, **kwargs}
         for i, corr in enumerate(metric):
             ind = np.argpartition(np.abs(corr), -top)[-top:]
             ind = ind[np.argsort(corr[ind])]
             for j in range(top):
                 x, y = self.dataset.X[:, ind[j]], self.dataset.Y[:, i]
-                axes[i, j].scatter(x=x, y=y, s=4)
+                axes[i, j].scatter(x=x, y=y, **scatter_kwargs)
                 y_lim = axes[i, j].get_ylim()
                 m, b = np.polyfit(x, y, 1)
                 axes[i, j].plot(x, m * x + b, c="k")
@@ -280,13 +310,16 @@ class PreHocAnalysis(_Explain):
                 axes[i, j].set_title("{} {:.2f}".format(method.value, corr[ind[j]]))
                 axes[i, j].set_xlabel("Feature {}".format(self.dataset.X_names[ind[j]]))
                 axes[i, j].set_ylabel("Output {}".format(self.dataset.Y_names[i]))
-        plt.tight_layout()
+        if created:
+            axes[0, 0].get_figure().tight_layout()
         return axes
 
+    @_styled_unless("ax")
     def bar_plot_importance(
         self,
         method: FeatureRanking = FeatureRanking.CORR,
         ax: Axes | np.ndarray | None = None,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Plot a bar plot of feature ranking.
 
@@ -299,13 +332,17 @@ class PreHocAnalysis(_Explain):
             The method to calculate the feature importance.
             Defaults to FeatureRanking.CORR.
 
-        ax: Array of `plt.Axes`, optional
-            The axes on where to draw the bar plot (for one or more output variables)
+        ax: `plt.Axes` or array of `plt.Axes`, optional
+            The axes on where to draw the bar plot, one per output variable (any
+            shape). Defaults to None, in which case a new figure is created.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar`.
 
         Returns
         -------
-        `plt.Axes`
-            The matplotlib axes with the plot
+        `np.ndarray`
+            A 1-D array with one matplotlib axes per output
 
         """
         metric = self.feature_importance(method)
@@ -313,34 +350,29 @@ class PreHocAnalysis(_Explain):
             _, ax = plt.subplots(
                 self.dataset.n_outputs,
                 1,
-                figsize=(11.69, 8.27),
+                figsize=FIGSIZE,
                 squeeze=False,
                 sharex=True,
                 sharey=True,
-                dpi=200,
+                dpi=DPI,
             )
             ax = ax.flatten()
         else:
-            msg = "The length of the axes should equal the number of outputs"
-            if isinstance(ax, Axes):
-                if self.dataset.n_outputs == 1:
-                    ax = np.array([ax])
-                else:
-                    raise SpectraXAIValueError(msg)
-            if ax.size != self.dataset.n_outputs:
-                raise SpectraXAIValueError(msg)
+            ax = _as_axes_array(ax, self.dataset.n_outputs, "one per output")
         for i, corr in enumerate(metric):
-            self._bar_plot(height=corr, ax=ax[i], ylabel=method.value)
+            self._bar_plot(height=corr, ax=ax[i], ylabel=method.value, **kwargs)
             ax[i].set_title(self.dataset.Y_names[i])
             self._stylize_plot(ax[i])
             if i + 1 < self.dataset.n_outputs:
                 ax[i].set_xlabel("")
         return ax
 
+    @_styled_unless("ax")
     def mean_spectrum(
         self,
         ax: Axes | None = None,
         excluded_bands: Sequence[tuple[float, float]] | None = None,
+        **kwargs: Any,
     ) -> Axes:
         r"""Plot the mean spectrum ± standard deviation of the dataset.
 
@@ -353,14 +385,16 @@ class PreHocAnalysis(_Explain):
             Inclusive wavelength intervals to leave blank, such as atmospheric
             absorption bands.
 
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.plot` for the mean line (e.g.
+            ``color`` or ``label``); the ±SD band uses the same color.
+
         Returns
         -------
         Axes
             The matplotlib axes with the plot.
 
         """
-        if ax is None:
-            _, ax = plt.subplots(figsize=(11.69, 8.27), dpi=200)
 
         try:
             wavelengths = np.asarray(self.dataset.X_names, dtype=float)
@@ -383,6 +417,9 @@ class PreHocAnalysis(_Explain):
                 "with start <= end"
             )
 
+        if ax is None:
+            _, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
+
         order = np.argsort(wavelengths)
         wavelengths = wavelengths[order]
         spectra = np.asarray(self.dataset.X)[:, order]
@@ -402,7 +439,9 @@ class PreHocAnalysis(_Explain):
             split_points = np.where(np.diff(valid_indices) > 1)[0] + 1
             segments = np.split(valid_indices, split_points)
 
-            color = None
+            line_kwargs = {"linewidth": 1.5, **normalize_kwargs(kwargs, Line2D)}
+            color = line_kwargs.pop("color", None)
+            label = line_kwargs.pop("label", None)
             for seg_idx in segments:
                 if len(seg_idx) == 0:
                     continue
@@ -413,7 +452,10 @@ class PreHocAnalysis(_Explain):
                 seg_upper = seg_mean + sd[seg_idx]
 
                 # Plot each continuous segment cleanly
-                line_plots = ax.plot(seg_x, seg_mean, color=color, lw=1.5)
+                line_plots = ax.plot(
+                    seg_x, seg_mean, color=color, label=label, **line_kwargs
+                )
+                label = None  # one legend entry for all segments
                 if color is None:
                     color = line_plots[0].get_color()
 
@@ -427,12 +469,16 @@ class PreHocAnalysis(_Explain):
                 )
         return self._stylize_plot(ax)
 
+    @_styled_unless("axes")
     def mean_spectrum_by_range(
         self,
         y_ranges: Sequence[np.ndarray],
         preprocesses: Sequence[SpectralPreprocessing] | None = None,
         ylims: Sequence[Sequence[float]] | None = None,
         excluded_bands: Sequence[tuple[float, float]] | None = None,
+        *,
+        axes: np.ndarray | Axes | None = None,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Plot the mean spectrum (across all samples) per output range.
 
@@ -456,10 +502,17 @@ class PreHocAnalysis(_Explain):
             Inclusive wavelength intervals to leave blank, such as atmospheric
             absorption bands.
 
+        axes: `plt.Axes` or array of `plt.Axes`, optional
+            One axes per output to draw into (any shape). Defaults to None, in which
+            case a new figure is created.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.plot` for every range's line.
+
         Returns
         -------
-        `plt.Axes`
-            The matplotlib axes with the plot
+        `np.ndarray`
+            A 2-D array of shape (`n_outputs`, 1) with the matplotlib axes
 
         """
         if len(y_ranges) != self.dataset.n_outputs:
@@ -487,13 +540,18 @@ class PreHocAnalysis(_Explain):
                 "with start <= end"
             )
 
-        _, axes = plt.subplots(
-            self.dataset.n_outputs,
-            1,
-            figsize=(11.69, 8.27 * self.dataset.n_outputs),
-            dpi=200,
-            squeeze=False,
-        )
+        if axes is None:
+            _, axes = plt.subplots(
+                self.dataset.n_outputs,
+                1,
+                figsize=(FIGSIZE[0], FIGSIZE[1] * self.dataset.n_outputs),
+                dpi=DPI,
+                squeeze=False,
+            )
+        else:
+            axes = _as_axes_array(axes, self.dataset.n_outputs, "one per output")
+            axes = axes.reshape(self.dataset.n_outputs, 1)
+        line_kwargs = {"linewidth": 2, **normalize_kwargs(kwargs, Line2D)}
         dfs = []
         for method in preprocesses:
             dataset = self.dataset.preprocess(method)
@@ -539,8 +597,7 @@ class PreHocAnalysis(_Explain):
                         wavelengths,
                         y,
                         label=groupedPerProp.index[k],
-                        linewidth=2,
-                        c=cmap[k],
+                        **{"color": cmap[k], **line_kwargs},
                     )
                     plot_ax.yaxis.set_major_locator(LinearLocator(5))
 
@@ -565,8 +622,9 @@ class PreHocAnalysis(_Explain):
 class PostHocAnalysis(_Explain):
     """A class to provide methods for post-hoc explainability analysis."""
 
+    @_styled_unless("ax")
     def bar_plot_importance(
-        self, importance: np.ndarray, ax: Axes | None = None
+        self, importance: np.ndarray, ax: Axes | None = None, **kwargs: Any
     ) -> Axes:
         """Plot a bar plot of the feature importance.
 
@@ -580,16 +638,24 @@ class PostHocAnalysis(_Explain):
             An optional matplotlib axes to plot into. Defaults to None,
             in which case a new figure is created.
 
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar`.
+
         Returns
         -------
         `plt.Axes`
             The matplotlib axes with the plot
 
         """
-        return self._bar_plot(height=importance, ax=ax, ylabel="Importance")
+        return self._bar_plot(height=importance, ax=ax, ylabel="Importance", **kwargs)
 
+    @_styled_unless("ax")
     def circular_bar_plot_importance(
-        self, importance: np.ndarray, ax: Axes | None = None, top: int | None = None
+        self,
+        importance: np.ndarray,
+        ax: Axes | None = None,
+        top: int | None = None,
+        **kwargs: Any,
     ) -> Axes:
         """Plot a circular (spiral) bar plot of the feature importance.
 
@@ -599,13 +665,17 @@ class PostHocAnalysis(_Explain):
             A numpy array of shape (`spectraxai.dataset.Dataset.n_features`,1)
             containing the importance of each feature
 
-        ax: `plt.Axes
-            An optional matplotlib axes to plot into. Defaults to None,
-            in which case a new figure is created.
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes with a polar projection to plot into, e.g.
+            ``fig.add_subplot(projection="polar")``. Defaults to None, in which case
+            a new figure is created (with the polar frame hidden).
 
         top: `int`, optional
             The number of most important features to consider. Defaults to None, where
             all features all plotted.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar` (e.g. ``color``).
 
         Returns
         -------
@@ -613,11 +683,16 @@ class PostHocAnalysis(_Explain):
             The matplotlib axes with the plot
 
         """
+        self._check_bar_array(importance)
         if ax is None:
             fig = plt.figure(figsize=(20, 10))
             ax = cast(Axes, fig.add_subplot(111, polar=True))
             ax.axis("off")
-        self._check_bar_array(importance)
+        elif ax.name != "polar":
+            raise SpectraXAIValueError(
+                "ax should use a polar projection, e.g. "
+                "fig.add_subplot(projection='polar')"
+            )
         # Build a dataset
         df = pandas.DataFrame({"Name": self.dataset.X_names, "Value": importance})
 
@@ -650,14 +725,14 @@ class PostHocAnalysis(_Explain):
         angles = [element * width for element in indexes]
 
         # Draw bars
+        bar_kwargs = {
+            "linewidth": 2,
+            "edgecolor": "white",
+            "color": "#61a4b2",
+            **normalize_kwargs(kwargs, Patch),
+        }
         bars = ax.bar(
-            x=angles,
-            height=heights,
-            width=width,
-            bottom=lowerLimit,
-            linewidth=2,
-            edgecolor="white",
-            color="#61a4b2",
+            x=angles, height=heights, width=width, bottom=lowerLimit, **bar_kwargs
         )
 
         # Add labels
@@ -687,8 +762,13 @@ class PostHocAnalysis(_Explain):
 
         return ax
 
+    @_styled_unless("ax")
     def bar_plot_permutation_importance(
-        self, model: Any, dataset: Dataset | None = None, ax: Axes | None = None
+        self,
+        model: Any,
+        dataset: Dataset | None = None,
+        ax: Axes | None = None,
+        **kwargs: Any,
     ) -> Axes:
         """Create a bar plot using permutation feature importance.
 
@@ -705,6 +785,9 @@ class PostHocAnalysis(_Explain):
         ax: `plt.Axes`, optional
             An optional matplotlib axes to plot into. Defaults to None, in which
             case a new figure is created.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.bar`.
 
         Returns
         -------
@@ -726,7 +809,10 @@ class PostHocAnalysis(_Explain):
             ),
         )
         ax = self._bar_plot(
-            height=result.importances_mean, yerr=result.importances_std, ax=ax
+            height=result.importances_mean,
+            yerr=result.importances_std,
+            ax=ax,
+            **kwargs,
         )
         ax.set_title("Feature importances using permutation")
         ax.set_ylabel("Mean decrease in score")
