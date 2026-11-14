@@ -19,9 +19,11 @@ import pandas
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_X_y
 import kennard_stone
 
+from spectraxai.exceptions import SpectraXAIValueError
 from spectraxai.spectra import Spectra, SpectralPreprocessingSequence
 
 ScaleResult = (
@@ -140,17 +142,14 @@ class Scale(str, Enum):
         """
         set_params = {} if set_params is None else set_params
         set_attributes = {} if set_attributes is None else set_attributes
-        if method == Scale.STANDARD:
-            scaler = StandardScaler()
-        elif method == Scale.MINMAX:
-            scaler = MinMaxScaler()
+        scaler = Scale.__new_scaler(method)
         if len(set_params) != 0:
             scaler = scaler.set_params(**set_params)
         if len(set_attributes) != 0:
             scaler = Scale.__set_scale_attributes(method, scaler, set_attributes)
         else:
             scaler = scaler.fit(X)
-        X = scaler.transform(X)
+        X = np.asarray(scaler.transform(X))
         if len(set_params) == 0 and len(set_attributes) == 0:
             return X, scaler.get_params(), Scale.__get_scale_attributes(method, scaler)
         elif len(set_params) != 0 and len(set_attributes) != 0:
@@ -195,16 +194,21 @@ class Scale(str, Enum):
         """
         set_params = {} if set_params is None else set_params
         if not set_attributes:
-            raise AssertionError("You need to specify set_attributes")
-        if method == Scale.STANDARD:
-            scaler = StandardScaler()
-        elif method == Scale.MINMAX:
-            scaler = MinMaxScaler()
+            raise SpectraXAIValueError("You need to specify set_attributes")
+        scaler = Scale.__new_scaler(method)
         if len(set_params) != 0:
             scaler = scaler.set_params(**set_params)
         scaler = Scale.__set_scale_attributes(method, scaler, set_attributes)
         X = scaler.inverse_transform(X)
         return X
+
+    @staticmethod
+    def __new_scaler(method: "Scale") -> StandardScaler | MinMaxScaler:
+        if method == Scale.STANDARD:
+            return StandardScaler()
+        elif method == Scale.MINMAX:
+            return MinMaxScaler()
+        raise SpectraXAIValueError(f"Unknown scaling method: {method!r}")
 
     @staticmethod
     def __set_scale_attributes(
@@ -330,9 +334,9 @@ class Dataset:
         if isinstance(Y, pandas.DataFrame | pandas.Series):
             Y = Y.to_numpy()
         if X.shape[0] != Y.shape[0]:
-            raise AssertionError("X and Y don't have the same number of rows!")
+            raise SpectraXAIValueError("X and Y don't have the same number of rows!")
         if X.ndim != 2:
-            raise AssertionError("X should have exactly two dimensions")
+            raise SpectraXAIValueError("X should have exactly two dimensions")
         self.X = X
         self.Y = Y if Y.ndim > 1 else Y.reshape(-1, 1)
         check_X_y(self.X, self.Y, multi_output=True)
@@ -340,9 +344,9 @@ class Dataset:
         self.n_features = self.X.shape[1]
         self.n_outputs = self.Y.shape[1]
         if X_names and len(X_names) != self.n_features:
-            raise AssertionError("X_names should have the same n_features as X")
+            raise SpectraXAIValueError("X_names should have the same n_features as X")
         if Y_names and len(Y_names) != self.n_outputs:
-            raise AssertionError("Y_names should have the same n_outputs as Y")
+            raise SpectraXAIValueError("Y_names should have the same n_outputs as Y")
         self.X_names = (
             list(X_names)
             if X_names
@@ -360,7 +364,14 @@ class Dataset:
             result = result.astype(np.int64)
         return result
 
-    def train_test_split(self, split: DatasetSplit, opt: int | float) -> DataSplit:
+    def train_test_split(
+        self,
+        split: DatasetSplit,
+        opt: int | float,
+        *,
+        random_state: int | None = None,
+        n_bins: int = 10,
+    ) -> DataSplit:
         """Split dataset with passed split method to train and test.
 
         Parameters
@@ -372,6 +383,15 @@ class Dataset:
             A float number (between 0 and 1) indicating the percentage of the
             training dataset for Random and Kennard–Stone split. A natural number
             for Cross Validation and Stratified split.
+
+        random_state: `int`, optional
+            Seed for the RANDOM, CROSS_VALIDATION and STRATIFIED splits. Defaults to
+            None (non-reproducible, as in earlier versions).
+
+        n_bins: `int`, optional
+            For the STRATIFIED split of a continuous output: the number of quantile
+            bins of the (first) output used as strata. Class-like outputs (binary
+            or multiclass) are stratified on their labels directly. Defaults to 10.
 
         Returns
         -------
@@ -389,7 +409,7 @@ class Dataset:
             if not isinstance(opt, float):
                 raise TypeError(msg)
             if opt <= 0 or opt >= 1:
-                raise ValueError(msg)
+                raise SpectraXAIValueError(msg)
         elif split == DatasetSplit.CROSS_VALIDATION or split == DatasetSplit.STRATIFIED:
             msg = (
                 "opt param should be a positive int greater than 1 for "
@@ -398,10 +418,12 @@ class Dataset:
             if not isinstance(opt, int):
                 raise TypeError(msg)
             if opt <= 1:
-                raise ValueError(msg)
+                raise SpectraXAIValueError(msg)
         if split == DatasetSplit.RANDOM:
-            idx_trn, idx_tst = train_test_split(indices, train_size=opt)
-            return idx_trn, idx_tst
+            idx_trn, idx_tst = train_test_split(
+                indices, train_size=opt, random_state=random_state
+            )
+            return np.asarray(idx_trn), np.asarray(idx_tst)
         elif split == DatasetSplit.KENNARD_STONE:
             _, _, idx_trn, idx_tst = kennard_stone.train_test_split(
                 self.X, indices, test_size=(1 - opt)
@@ -411,7 +433,7 @@ class Dataset:
             raise NotImplementedError("clhs not implemented yet")
         elif split == DatasetSplit.CROSS_VALIDATION:
             assert isinstance(opt, int)
-            kf = KFold(opt, shuffle=True)
+            kf = KFold(opt, shuffle=True, random_state=random_state)
             idx_trn, idx_tst = [], []
             for trn_index, tst_index in kf.split(self.X):
                 idx_trn.append(np.array(trn_index))
@@ -419,12 +441,28 @@ class Dataset:
             return self._repair_split_array(idx_trn), self._repair_split_array(idx_tst)
         elif split == DatasetSplit.STRATIFIED:
             assert isinstance(opt, int)
-            skf = StratifiedKFold(n_splits=opt)
+            if random_state is None:
+                skf = StratifiedKFold(n_splits=opt)
+            else:
+                skf = StratifiedKFold(
+                    n_splits=opt, shuffle=True, random_state=random_state
+                )
             idx_trn, idx_tst = [], []
-            for trn_index, tst_index in skf.split(self.X, self.Y):
+            for trn_index, tst_index in skf.split(self.X, self._strata(n_bins)):
                 idx_trn.append(np.array(trn_index))
                 idx_tst.append(np.array(tst_index))
             return self._repair_split_array(idx_trn), self._repair_split_array(idx_tst)
+
+    def _strata(self, n_bins: int) -> np.ndarray:
+        """Labels to stratify on: class labels, or quantile bins of output 1."""
+        y = self.Y[:, 0] if self.n_outputs > 1 else self.Y.ravel()
+        if type_of_target(y) in ("binary", "multiclass"):
+            return y
+        if n_bins < 2:
+            raise SpectraXAIValueError("n_bins should be at least 2")
+        return np.asarray(
+            pandas.qcut(y, q=n_bins, labels=False, duplicates="drop"), dtype=int
+        )
 
     def train_test_split_explicit(
         self, trn: np.ndarray | None = None, tst: np.ndarray | None = None
@@ -452,9 +490,9 @@ class Dataset:
         trn = np.array([]) if trn is None else trn
         tst = np.array([]) if tst is None else tst
         if tst.size == 0 and trn.size == 0:
-            raise AssertionError("You need to specify either tst or trn indices")
+            raise SpectraXAIValueError("You need to specify either tst or trn indices")
         if tst.size > 0 and trn.size > 0:
-            raise AssertionError("You cannot specify both trn and tst")
+            raise SpectraXAIValueError("You cannot specify both trn and tst")
         train_indices: np.ndarray | list[np.ndarray] = trn
         test_indices: np.ndarray | list[np.ndarray] = tst
         if tst.size > 0 and isinstance(tst[0], np.ndarray):
@@ -462,16 +500,16 @@ class Dataset:
                 self.train_test_split_explicit(tst=fold)[0] for fold in tst
             ]
         elif tst.size > 0:
-            if not np.logical_and(tst >= 0, tst <= self.n_samples).all():
-                raise AssertionError("Passed indices contain out of bound values")
+            if not np.logical_and(tst >= 0, tst < self.n_samples).all():
+                raise SpectraXAIValueError("Passed indices contain out of bound values")
             train_indices = np.array(
                 list(set(range(0, self.n_samples)).difference(set(tst)))
             )
         elif trn.size > 0 and isinstance(trn[0], np.ndarray):
             test_indices = [self.train_test_split_explicit(trn=fold)[1] for fold in trn]
         else:
-            if not np.logical_and(trn >= 0, trn <= self.n_samples).all():
-                raise AssertionError("Passed indices contain out of bound values")
+            if not np.logical_and(trn >= 0, trn < self.n_samples).all():
+                raise SpectraXAIValueError("Passed indices contain out of bound values")
             test_indices = np.array(
                 list(set(range(0, self.n_samples)).difference(set(trn)))
             )
@@ -497,11 +535,13 @@ class Dataset:
 
         """
         if idx.size == 0:
-            raise ValueError("Passed indices for subsetting cannot be empty")
+            raise SpectraXAIValueError("Passed indices for subsetting cannot be empty")
         if idx.size > 0 and isinstance(idx[0], np.ndarray):
-            raise ValueError("Expected indices array to contain only one dimension")
-        if not np.logical_and(idx >= 0, idx <= self.n_samples).all():
-            raise ValueError("Indices contain out of bound values")
+            raise SpectraXAIValueError(
+                "Expected indices array to contain only one dimension"
+            )
+        if not np.logical_and(idx >= 0, idx < self.n_samples).all():
+            raise SpectraXAIValueError("Indices contain out of bound values")
         return Dataset(self.X[idx], self.Y[idx], self.X_names, self.Y_names)
 
     def preprocess(self, method: SpectralPreprocessingSequence) -> "Dataset":

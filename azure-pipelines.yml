@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# Test, lint, type-check, and run the examples on multiple Python versions.
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 trigger:
@@ -13,39 +11,84 @@ trigger:
 
 pool:
   vmImage: ubuntu-latest
-strategy:
-  matrix:
-    Python313:
-      python.version: '3.13'
-    Python314:
-      python.version: '3.14'
-    Python315:
-      python.version: '3.15'
 
-steps:
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
-  displayName: 'Use Python $(python.version)'
+jobs:
+- job: Test
+  strategy:
+    matrix:
+      Python313:
+        python.version: '3.13'
+      Python314:
+        python.version: '3.14'
+      Python315:
+        python.version: '3.15'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+    displayName: 'Use Python $(python.version)'
 
-- script: |
-    python -m pip install --upgrade pip
-    pip install .
-  displayName: 'Install dependencies'
+  - script: |
+      python -m pip install --upgrade pip
+      pip install ".[dev]" pytest-azurepipelines
+    displayName: 'Install dependencies'
 
-- script: |
-    pip install pytest pytest-azurepipelines
-    pip install pytest-cov
-    pytest --doctest-modules --junitxml=junit/test-results.xml --cov=. --cov-report=xml
-  displayName: 'pytest'
+  - script: |
+      pytest --doctest-modules spectraxai tests \
+        --junitxml=junit/test-results.xml \
+        --cov --cov-report=xml --cov-report=term
+    displayName: 'pytest (coverage floor in pyproject.toml)'
 
-- task: PublishTestResults@2
-  condition: succeededOrFailed()
-  inputs:
-    testResultsFiles: '**/test-*.xml'
-    testRunTitle: 'Publish test results for Python $(python.version)'
-    
-- task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+
+- job: Lint
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.13'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install ".[dev]"
+    displayName: 'Install dependencies'
+
+  - script: flake8 --max-line-length=88 --extend-ignore=E203,E731 spectraxai tests examples
+    displayName: 'flake8'
+
+  - script: black --check spectraxai tests examples
+    displayName: 'black'
+
+  - script: pyright
+    displayName: 'pyright'
+
+- job: Examples
+  timeoutInMinutes: 60
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.13'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install ".[dev]"
+    displayName: 'Install dependencies'
+
+  - script: |
+      for script in examples/*.py; do python "$script" || exit 1; done
+    displayName: 'Run example scripts'
+    env:
+      MPLBACKEND: Agg
+
+  - script: pytest --nbmake --nbmake-kernel=python3 --nbmake-timeout=1800 examples/
+    displayName: 'Run example notebooks'
+    env:
+      MPLBACKEND: Agg

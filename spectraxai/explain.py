@@ -27,6 +27,7 @@ import sage
 from sage.core import Explanation
 
 from spectraxai.dataset import Dataset
+from spectraxai.exceptions import SpectraXAIValueError
 from spectraxai.spectra import SpectralPreprocessing
 
 
@@ -50,7 +51,10 @@ class _Explain:
     dataset: Dataset
     """A `spectraxai.dataset.Dataset` object used to inspect and/or train the model."""
 
-    def __init__(self, dataset: Dataset) -> None:
+    random_state: int | None
+    """Seed for stochastic analyses (mutual information, permutation importance)."""
+
+    def __init__(self, dataset: Dataset, *, random_state: int | None = None) -> None:
         """Initialize using a dataset.
 
         Parameters
@@ -58,15 +62,22 @@ class _Explain:
         dataset: `spectraxai.dataset.Dataset`
             The dataset to inspect and/or used to train the model
 
+        random_state: `int`, optional
+            Seed for stochastic analyses (mutual information, permutation
+            importance). Defaults to None (non-reproducible, as in earlier versions).
+
         """
         self.dataset = dataset
+        self.random_state = random_state
         plt.style.use("seaborn-v0_8-whitegrid")
 
     def _check_bar_array(self, array: np.ndarray) -> None:
         if not array.size:
-            raise ValueError("The array containing the bar values cannot be empty")
+            raise SpectraXAIValueError(
+                "The array containing the bar values cannot be empty"
+            )
         if array.shape[0] != self.dataset.n_features:
-            raise ValueError(
+            raise SpectraXAIValueError(
                 "The number of bars should equal the number of input features"
             )
 
@@ -126,6 +137,12 @@ class _Explain:
         return ax
 
 
+def _normalize_by_max(values: np.ndarray) -> np.ndarray:
+    """Scale values so that the maximum is 1, leaving all-zero arrays unchanged."""
+    peak = np.max(values)
+    return values / peak if peak > 0 else values
+
+
 class PreHocAnalysis(_Explain):
     """A class to provide methods for pre-hoc explainability analysis."""
 
@@ -161,10 +178,15 @@ class PreHocAnalysis(_Explain):
             `spectraxai.dataset.Dataset.n_features`)
 
         """
-        normalize = lambda a: a / np.max(a)
         return np.array(
             [
-                normalize(mutual_info_regression(self.dataset.X, self.dataset.Y[:, j]))
+                _normalize_by_max(
+                    mutual_info_regression(
+                        self.dataset.X,
+                        self.dataset.Y[:, j],
+                        random_state=self.random_state,
+                    )
+                )
                 for j in range(self.dataset.n_outputs)
             ]
         )
@@ -183,10 +205,11 @@ class PreHocAnalysis(_Explain):
             `spectraxai.dataset.Dataset.n_features`)
 
         """
-        normalize = lambda a: a / np.max(a)
         return np.array(
             [
-                normalize(f_regression(self.dataset.X, self.dataset.Y[:, j])[0])
+                _normalize_by_max(
+                    np.nan_to_num(f_regression(self.dataset.X, self.dataset.Y[:, j])[0])
+                )
                 for j in range(self.dataset.n_outputs)
             ]
         )
@@ -209,7 +232,7 @@ class PreHocAnalysis(_Explain):
 
         """
         if not isinstance(method, FeatureRanking):
-            raise ValueError(
+            raise SpectraXAIValueError(
                 "Method must be one of the types defined in FeatureRanking"
             )
         if method == FeatureRanking.CORR:
@@ -218,6 +241,7 @@ class PreHocAnalysis(_Explain):
             return self._mi()
         elif method == FeatureRanking.F_STATISTIC:
             return self._f_statistic()
+        raise SpectraXAIValueError(f"Unsupported feature ranking: {method!r}")
 
     def correlogram(
         self, top: int = 5, method: FeatureRanking = FeatureRanking.CORR
@@ -302,9 +326,9 @@ class PreHocAnalysis(_Explain):
                 if self.dataset.n_outputs == 1:
                     ax = np.array([ax])
                 else:
-                    raise ValueError(msg)
+                    raise SpectraXAIValueError(msg)
             if ax.size != self.dataset.n_outputs:
-                raise ValueError(msg)
+                raise SpectraXAIValueError(msg)
         for i, corr in enumerate(metric):
             self._bar_plot(height=corr, ax=ax[i], ylabel=method.value)
             ax[i].set_title(self.dataset.Y_names[i])
@@ -341,10 +365,12 @@ class PreHocAnalysis(_Explain):
         try:
             wavelengths = np.asarray(self.dataset.X_names, dtype=float)
         except (TypeError, ValueError) as error:
-            raise ValueError("X_names must contain numeric wavelengths") from error
+            raise SpectraXAIValueError(
+                "X_names must contain numeric wavelengths"
+            ) from error
 
         if not np.isfinite(wavelengths).all():
-            raise ValueError("X_names must contain finite wavelengths")
+            raise SpectraXAIValueError("X_names must contain finite wavelengths")
 
         bands = np.asarray(
             excluded_bands if excluded_bands is not None else [],
@@ -352,7 +378,7 @@ class PreHocAnalysis(_Explain):
         ).reshape(-1, 2)
 
         if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
-            raise ValueError(
+            raise SpectraXAIValueError(
                 "excluded_bands must contain finite (start, end) wavelength pairs "
                 "with start <= end"
             )
@@ -437,14 +463,14 @@ class PreHocAnalysis(_Explain):
 
         """
         if len(y_ranges) != self.dataset.n_outputs:
-            raise AssertionError(
+            raise SpectraXAIValueError(
                 "The length of y_ranges should equal the dataset's n_outputs"
             )
         preprocesses = [] if preprocesses is None else preprocesses
         ylims = [] if ylims is None else ylims
         if preprocesses and ylims:
             if len(preprocesses) != len(ylims):
-                raise AssertionError(
+                raise SpectraXAIValueError(
                     "The length of the preprocesses and ylims lists should be the same"
                 )
         if not preprocesses:
@@ -456,7 +482,7 @@ class PreHocAnalysis(_Explain):
         ).reshape(-1, 2)
 
         if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
-            raise ValueError(
+            raise SpectraXAIValueError(
                 "excluded_bands must contain finite (start, end) wavelength pairs "
                 "with start <= end"
             )
@@ -588,9 +614,9 @@ class PostHocAnalysis(_Explain):
 
         """
         if ax is None:
-            plt.figure(figsize=(20, 10))
-            ax = plt.subplot(111, polar=True)
-            plt.axis("off")
+            fig = plt.figure(figsize=(20, 10))
+            ax = cast(Axes, fig.add_subplot(111, polar=True))
+            ax.axis("off")
         self._check_bar_array(importance)
         # Build a dataset
         df = pandas.DataFrame({"Name": self.dataset.X_names, "Value": importance})
@@ -691,14 +717,19 @@ class PostHocAnalysis(_Explain):
         result = cast(
             Bunch,
             permutation_importance(
-                model, dataset.X, dataset.Y, n_repeats=10, n_jobs=-1
+                model,
+                dataset.X,
+                dataset.Y,
+                n_repeats=10,
+                n_jobs=-1,
+                random_state=self.random_state,
             ),
         )
         ax = self._bar_plot(
             height=result.importances_mean, yerr=result.importances_std, ax=ax
         )
         ax.set_title("Feature importances using permutation")
-        ax.set_ylabel("Mean decrease in impurity")
+        ax.set_ylabel("Mean decrease in score")
         return ax
 
     def sage_importance(self, model: Any) -> Explanation:

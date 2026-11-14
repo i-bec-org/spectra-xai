@@ -4,10 +4,13 @@
 
 import unittest
 import numpy as np
+import pytest
 from spectraxai.models import Model, StandardModel
 from spectraxai.spectra import SpectralPreprocessing
 from spectraxai.dataset import DatasetSplit
 from spectraxai.data import load_GR_SSL
+
+pytestmark = pytest.mark.slow
 
 
 class TestStandardModelClass(unittest.TestCase):

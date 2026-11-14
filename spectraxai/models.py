@@ -24,6 +24,7 @@ from sklearn.preprocessing import StandardScaler
 from cubist import Cubist
 import xgboost as xgb
 
+from spectraxai.exceptions import SpectraXAIValueError
 from spectraxai.utils import metrics, sigest
 from spectraxai.spectra import SpectralPreprocessing, SpectralPreprocessingSequence
 from spectraxai.dataset import Dataset
@@ -73,15 +74,27 @@ class StandardModel:
     """The best optimized model after tuning the hyperparameters."""
 
     best_score: float | None
+    """The best score (R2) in the internal validation set corresponding to the best
+    model. Only available after a grid search."""
+
     scaler: StandardScaler | None
-    """The best score (R2 for regression and accuracy for classification) in the
-    internal validation set corresponding to the best model."""
+    """The scaler fitted on the training inputs (used by SVR only)."""
+
+    random_state: int | None
+    """Seed passed to stochastic models (RF, XGBoost, Cubist) and to the SVR gamma
+    estimation. None keeps the behaviour of earlier versions."""
+
+    param_grid_: dict[str, Any] | None
+    """The grid actually searched by the last call to `fit`, including any
+    dataset-dependent entries (SVR gamma, PLS n_components)."""
 
     def __init__(
         self,
         model: Model,
         init_hyperparameters: dict[str, Any] | None = None,
         grid_search_hyperparameters: dict[str, Any] | None = None,
+        *,
+        random_state: int | None = None,
     ) -> None:
         """Initialize StandardModel class for a `Model` and its hyperparameters.
 
@@ -99,6 +112,11 @@ class StandardModel:
         grid_search_hyperparameters: `dict`, optional
             Specify custom grid search range for the hyperparameters
 
+        random_state: `int`, optional
+            Seed for stochastic models (RF, XGBoost, Cubist) and for the SVR gamma
+            estimation, making results reproducible. Defaults to None, which keeps
+            the behaviour of earlier versions (XGBoost then uses seed 2000).
+
         """
         init_hyperparameters = (
             {} if init_hyperparameters is None else init_hyperparameters
@@ -107,8 +125,8 @@ class StandardModel:
             {} if grid_search_hyperparameters is None else grid_search_hyperparameters
         )
         if init_hyperparameters and grid_search_hyperparameters:
-            raise AssertionError(
-                "You cannot specify both init_hyperparameters and"
+            raise SpectraXAIValueError(
+                "You cannot specify both init_hyperparameters and "
                 "grid_search_hyperparameters"
             )
         self.model = model
@@ -142,11 +160,59 @@ class StandardModel:
                     "colsample_bytree": [0.3, 0.6],
                     "alpha": [0, 10],
                 }
+        self.random_state = random_state
         self.training_time = None
         self.testing_time = None
         self.best_model = None
+        self.best_hyperparameters = None
         self.best_score = None
         self.scaler = None
+        self.param_grid_ = None
+
+    def _new_estimator(self, grid_search: bool) -> Any:
+        """Create an unfitted estimator for `model`, seeded by `random_state`.
+
+        Without a `random_state`, XGBoost keeps the historical seed of 2000 in grid
+        search and its library default otherwise.
+
+        """
+        seeded: dict[str, Any] = (
+            {} if self.random_state is None else {"random_state": self.random_state}
+        )
+        if self.model == Model.SVR:
+            return SVR(kernel="rbf", max_iter=int(5e8))
+        elif self.model == Model.PLS:
+            return PLSRegression()
+        elif self.model == Model.RF:
+            return RandomForestRegressor(**seeded)
+        elif self.model == Model.CUBIST:
+            return Cubist(**seeded)
+        elif self.model == Model.XGBOOST:
+            if self.random_state is not None:
+                return xgb.XGBRegressor(random_state=self.random_state)
+            return xgb.XGBRegressor(seed=2000) if grid_search else xgb.XGBRegressor()
+        raise SpectraXAIValueError(f"Unsupported model: {self.model!r}")
+
+    _REPORTED_HYPERPARAMETERS: dict[Model, list[str]] = {
+        Model.SVR: ["C", "epsilon", "gamma"],
+        Model.PLS: ["n_components"],
+        Model.RF: ["max_features", "n_estimators"],
+        Model.CUBIST: ["n_committees", "neighbors"],
+        Model.XGBOOST: [
+            "max_depth",
+            "learning_rate",
+            "n_estimators",
+            "colsample_bytree",
+            "alpha",
+        ],
+    }
+    """Hyperparameters reported as columns by `fit_and_predict`, per model."""
+
+    def _hyperparameter(self, key: str) -> Any:
+        """Return a fitted hyperparameter, falling back to the estimator's value."""
+        if self.best_hyperparameters is not None and key in self.best_hyperparameters:
+            return self.best_hyperparameters[key]
+        return self.best_model.get_params().get(key)
 
     def __vip(self, model: PLSRegression) -> np.ndarray:
         t = model.x_scores_
@@ -190,7 +256,7 @@ class StandardModel:
 
         """
         if self.model in [Model.SVR, Model.CUBIST] and dataset.n_outputs > 1:
-            raise AssertionError(
+            raise SpectraXAIValueError(
                 "Cannot create a multi-output model. "
                 "Please train a model for each output property."
             )
@@ -199,59 +265,34 @@ class StandardModel:
         if self.model == Model.SVR:
             self.scaler = StandardScaler()
             self.scaler.fit(dataset.X)
-            X_train = self.scaler.transform(dataset.X)
+            X_train = np.asarray(self.scaler.transform(dataset.X))
         else:
             X_train = dataset.X
 
         # If hyperparameters are passed, use them; otherwise run grid search
         if len(self.init_hyperparameters) != 0:
-            if self.model == Model.SVR:
-                self.best_model = SVR(kernel="rbf", max_iter=int(5e8))
-                self.best_model = self.best_model.set_params(
-                    **self.init_hyperparameters
-                )
-            elif self.model == Model.PLS:
-                self.best_model = PLSRegression()
-                self.best_model = self.best_model.set_params(
-                    **self.init_hyperparameters
-                )
-            elif self.model == Model.RF:
-                self.best_model = RandomForestRegressor()
-                self.best_model = self.best_model.set_params(
-                    **self.init_hyperparameters
-                )
-            elif self.model == Model.CUBIST:
-                self.best_model = Cubist(**self.init_hyperparameters)
-            elif self.model == Model.XGBOOST:
-                self.best_model = xgb.XGBRegressor(**self.init_hyperparameters)
+            self.best_model = self._new_estimator(grid_search=False).set_params(
+                **self.init_hyperparameters
+            )
+            self.param_grid_ = None
             trn_t0 = time.time()
             self.best_model.fit(X_train, np.squeeze(dataset.Y))
-            self.best_hyperparameters = self.init_hyperparameters
+            self.best_hyperparameters = dict(self.init_hyperparameters)
             trn_t1 = time.time()
         else:
-            if self.model == Model.SVR:
-                if "gamma" not in self.grid_search_hyperparameters:
-                    gamma = sigest(X_train)
-                    self.grid_search_hyperparameters["gamma"] = np.linspace(
-                        gamma[0], gamma[2], num=5
-                    )
-                model = SVR(kernel="rbf", max_iter=int(5e8))
-            elif self.model == Model.PLS:
-                if "n_components" not in self.grid_search_hyperparameters:
-                    self.grid_search_hyperparameters["n_components"] = np.arange(
-                        1, min(100, X_train.shape[1]), 1
-                    )
-                model = PLSRegression()
-            elif self.model == Model.RF:
-                model = RandomForestRegressor()
-            elif self.model == Model.CUBIST:
-                model = Cubist()
-            elif self.model == Model.XGBOOST:
-                model = xgb.XGBRegressor(seed=2000)
+            # Work on a copy so that dataset-dependent entries computed here do not
+            # leak into later calls (e.g. other folds or pre-processings).
+            param_grid = dict(self.grid_search_hyperparameters)
+            if self.model == Model.SVR and "gamma" not in param_grid:
+                gamma = sigest(X_train, random_state=self.random_state)
+                param_grid["gamma"] = np.linspace(gamma[0], gamma[2], num=5)
+            elif self.model == Model.PLS and "n_components" not in param_grid:
+                param_grid["n_components"] = np.arange(1, min(100, X_train.shape[1]), 1)
+            self.param_grid_ = param_grid
             trn_t0 = time.time()
             grid_search = GridSearchCV(
-                estimator=model,
-                param_grid=self.grid_search_hyperparameters,
+                estimator=self._new_estimator(grid_search=True),
+                param_grid=param_grid,
                 cv=cv,
                 n_jobs=-1,
                 verbose=0,
@@ -285,7 +326,7 @@ class StandardModel:
         if self.model == Model.SVR:
             if self.scaler is None:
                 raise RuntimeError("The SVR scaler is unavailable")
-            X_test = self.scaler.transform(X_test)
+            X_test = np.asarray(self.scaler.transform(X_test))
         y_hat = self.best_model.predict(X_test)
         tst_t1 = time.time()
         self.testing_time = tst_t1 - tst_t0
@@ -334,16 +375,14 @@ class StandardModel:
         idx_trn = np.array([]) if idx_trn is None else idx_trn
         idx_tst = np.array([]) if idx_tst is None else idx_tst
         if idx_tst.size == 0 and idx_trn.size == 0:
-            raise AssertionError(
-                "You need to specify either tst or trn indices or both"
-            )
+            raise SpectraXAIValueError("You need to specify either tst or trn indices")
         if idx_tst.size > 0 and idx_trn.size > 0:
-            raise AssertionError("You cannot specify both trn and tst")
+            raise SpectraXAIValueError("You cannot specify both trn and tst")
         if idx_trn.size > 0 and isinstance(idx_trn[0], np.ndarray):  # Multiple-folds
             results = []
             for fold in range(idx_trn.shape[0]):
                 result = self.fit_and_predict(
-                    dataset, preprocess, idx_trn=idx_trn[fold]
+                    dataset, preprocess, idx_trn=idx_trn[fold], get_model=get_model
                 )
                 result["fold"] = fold + 1
                 results.append(result)
@@ -352,7 +391,7 @@ class StandardModel:
             results = []
             for fold in range(idx_tst.shape[0]):
                 result = self.fit_and_predict(
-                    dataset, preprocess, idx_tst=idx_tst[fold]
+                    dataset, preprocess, idx_tst=idx_tst[fold], get_model=get_model
                 )
                 result["fold"] = fold + 1
                 results.append(result)
@@ -377,20 +416,13 @@ class StandardModel:
             # Gather all results
             res["pre_process"] = str(preprocess)
             res["val_score"] = self.best_score
+            for key in self._REPORTED_HYPERPARAMETERS[self.model]:
+                res[key] = self._hyperparameter(key)
             if self.model == Model.SVR:
-                for key in ["C", "epsilon", "gamma"]:
-                    res[key] = self.best_hyperparameters[key]
                 res["SVs"] = len(self.best_model.support_)
             elif self.model == Model.PLS:
-                res["n_components"] = self.best_hyperparameters["n_components"]
                 res["feature_importance"] = self.__vip(self.best_model)
-            elif self.model == Model.RF:
-                for key in ["max_features", "n_estimators"]:
-                    res[key] = self.best_hyperparameters[key]
-                res["feature_importance"] = self.best_model.feature_importances_
-            elif self.model == Model.CUBIST:
-                for key in ["n_committees", "neighbors"]:
-                    res[key] = self.best_hyperparameters[key]
+            else:
                 res["feature_importance"] = self.best_model.feature_importances_
             res["training_time"] = self.training_time
             res["testing_time"] = self.testing_time
@@ -436,7 +468,7 @@ class StandardModel:
         idx_trn = np.array([]) if idx_trn is None else idx_trn
         idx_tst = np.array([]) if idx_tst is None else idx_tst
         if len(preprocesses) == 0:
-            raise ValueError(
+            raise SpectraXAIValueError(
                 "The list of SpectralPreprocessingSequence may not be empty"
             )
         results = [

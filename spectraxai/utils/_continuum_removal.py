@@ -26,21 +26,24 @@ def continuum_removal(
         Either a vector or a matrix of the pre-processed spectra
 
     """
-    assert spectrum.ndim == 1 or spectrum.ndim == 2
+    if spectrum.ndim not in (1, 2):
+        raise ValueError("spectrum should be a 1-D vector or a 2-D matrix")
+
+    if spectrum.ndim == 2:
+        return np.array([continuum_removal(s, wvs) for s in spectrum])
 
     if wvs is None or len(wvs) == 0:
         wvs = list(range(len(spectrum)))
     else:
         wvs = list(wvs)
+        if len(wvs) != len(spectrum):
+            raise ValueError("wvs should have the same length as the spectrum")
 
-    if spectrum.ndim == 2:
-        return np.array([continuum_removal(s) for s in spectrum])
-    else:
-        spectrum = 1 / spectrum  # needed for absorbance
-        mat = np.column_stack(
-            ([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0])
-        )
-        hull = ConvexHull(mat)
-        ids = np.array(sorted(hull.vertices)[1:-1]) - 1
-        cont = np.interp(wvs, np.array(wvs)[ids], spectrum[ids])
-        return spectrum / cont
+    spectrum = 1 / spectrum  # needed for absorbance
+    mat = np.column_stack(
+        ([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0])
+    )
+    hull = ConvexHull(mat)
+    ids = np.array(sorted(hull.vertices)[1:-1]) - 1
+    cont = np.interp(wvs, np.array(wvs)[ids], spectrum[ids])
+    return spectrum / cont

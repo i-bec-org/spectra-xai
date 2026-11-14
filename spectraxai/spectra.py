@@ -10,11 +10,13 @@ operations on them like pre-processing.
 """
 
 import ast
+import re
 from typing import Any, TypeGuard, cast
 import numpy as np
 from enum import Enum
 from scipy.signal import savgol_filter
 
+from spectraxai.exceptions import SpectraXAIValueError
 from spectraxai.utils import continuum_removal
 
 
@@ -46,44 +48,62 @@ class SpectralPreprocessing(str, Enum):
         return self.value
 
     @staticmethod
-    def __get_class(string: str) -> "SpectralPreprocessing | None":
-        return {
-            "no": SpectralPreprocessing.NONE,
-            "reflectance": SpectralPreprocessing.REF,
-            "absorbance": SpectralPreprocessing.ABS,
-            "SNV": SpectralPreprocessing.SNV,
-            "SG0": SpectralPreprocessing.SG0,
-            "SG1": SpectralPreprocessing.SG1,
-            "SG2": SpectralPreprocessing.SG2,
-            "continuum-removal": SpectralPreprocessing.CR,
-        }.get(string, None)
+    def _lookup(token: str) -> "SpectralPreprocessing":
+        """Find a member by its name (e.g. ``ABS``) or value (``absorbance``)."""
+        for member in SpectralPreprocessing:
+            if token in (member.name, member.value):
+                return member
+        raise SpectraXAIValueError(f"Unknown spectral pre-processing: {token!r}")
 
     @staticmethod
-    def __init_class(lst: list[Any]) -> list[Any]:
-        for i in range(len(lst)):
-            if isinstance(lst[i], tuple):
-                lst[i] = (SpectralPreprocessing.__get_class(lst[i][0]), lst[i][1])
-            elif isinstance(lst[i], list):
-                SpectralPreprocessing.__init_class(lst[i])
-            else:
-                lst[i] = SpectralPreprocessing.__get_class(lst[i])
-        return lst
+    def _from_literal(node: Any) -> Any:
+        if isinstance(node, str):
+            return SpectralPreprocessing._lookup(node)
+        if isinstance(node, list):
+            return [SpectralPreprocessing._from_literal(item) for item in node]
+        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
+            return (SpectralPreprocessing._lookup(node[0]), node[1])
+        raise SpectraXAIValueError(f"Cannot parse spectral pre-processing: {node!r}")
 
     @staticmethod
-    def init_class(string: str) -> list[Any]:
-        """Initialize from its string representation."""
-        lst = ast.literal_eval(
-            string.replace("no", "'no'")
-            .replace("reflectance", "'reflectance'")
-            .replace("absorbance", "'absorbance'")
-            .replace("SNV", "'SNV'")
-            .replace("SG0", "'SG0'")
-            .replace("SG1", "'SG1'")
-            .replace("SG2", "'SG2'")
-            .replace("continuum-removal", "'continuum-removal'")
+    def init_class(string: str) -> Any:
+        """Initialize from its string representation, i.e. the inverse of `str`.
+
+        Accepts anything `str` produces for a `SpectralPreprocessingSequence`, such as
+        the ``pre_process`` column returned by
+        `spectraxai.models.StandardModel.fit_and_predict`: a single member
+        (``"ABS"``), a member with options (``"(SG1, {'window_length': 7})"``) or a
+        (nested) list of those (``"[absorbance, SNV]"``). Members may be written by
+        name or by value.
+
+        Returns
+        -------
+        `SpectralPreprocessingSequence`
+            The parsed member, tuple or list (lists are returned as lists).
+
+        """
+        tokens = sorted(
+            {token for m in SpectralPreprocessing for token in (m.name, m.value)},
+            key=len,
+            reverse=True,
         )
-
-        return SpectralPreprocessing.__init_class(lst)
+        # Quote bare tokens only; tokens inside quotes (e.g. dict keys or string
+        # option values) are left untouched.
+        pattern = re.compile(
+            r"""('[^']*'|"[^"]*")|(?<![\w-])("""
+            + "|".join(re.escape(t) for t in tokens)
+            + r""")(?![\w-])"""
+        )
+        quoted = pattern.sub(
+            lambda m: m.group(1) if m.group(1) else repr(m.group(2)), string
+        )
+        try:
+            literal = ast.literal_eval(quoted)
+        except (ValueError, SyntaxError) as error:
+            raise SpectraXAIValueError(
+                f"Cannot parse spectral pre-processing: {string!r}"
+            ) from error
+        return SpectralPreprocessing._from_literal(literal)
 
 
 SpectralPreprocessingOptions = (
@@ -132,7 +152,7 @@ class Spectra:
         if X.ndim == 1:
             X = X.reshape(1, -1)
         if X.ndim != 2:
-            raise AssertionError("X should be a 2-D matrix")
+            raise SpectraXAIValueError("X should be a 2-D matrix")
         self.X = X
 
     def reflectance(self) -> "Spectra":
@@ -162,9 +182,7 @@ class Spectra:
 
     def cr(self) -> "Spectra":
         """Transform absorbance spectra using the Continuum Removal."""
-        return Spectra(
-            cast(np.ndarray, np.array(continuum_removal(np.squeeze(self.X))))
-        )
+        return Spectra(cast(np.ndarray, continuum_removal(self.X)))
 
     def __preprocess(self, method: SpectralPreprocessing, **kwargs: Any) -> "Spectra":
         """Apply a single transform specified by method."""
@@ -184,6 +202,7 @@ class Spectra:
             return self.cr()
         elif method == SpectralPreprocessing.NONE:
             return self
+        raise SpectraXAIValueError(f"Unknown spectral pre-processing: {method!r}")
 
     def preprocess(self, method: SpectralPreprocessingSequence) -> "Spectra":
         """Apply a pre-processing sequence (i.e., one or more) specified by method.
@@ -211,4 +230,9 @@ class Spectra:
                     self = self.__preprocess(each_method[0], **each_method[1])
                 elif isinstance(each_method, list):
                     self = self.preprocess(each_method)
+                else:
+                    raise SpectraXAIValueError(
+                        f"Unknown spectral pre-processing: {each_method!r}"
+                    )
             return self
+        raise SpectraXAIValueError(f"Unknown spectral pre-processing: {method!r}")

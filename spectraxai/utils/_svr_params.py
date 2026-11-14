@@ -7,13 +7,31 @@ Includes functions to estimate its hyperparameters.
 
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
 
-def sigest(x: np.ndarray, frac: float = 0.5, scale: bool = True) -> np.ndarray:
+def _rng(random_state: int | None) -> Any:
+    """Return a seeded generator, or the legacy global numpy RNG when None.
+
+    Using the global RNG for None keeps results identical to earlier versions for
+    users who seed via ``np.random.seed``.
+
+    """
+    return np.random if random_state is None else np.random.default_rng(random_state)
+
+
+def sigest(
+    x: np.ndarray,
+    frac: float = 0.5,
+    scale: bool = True,
+    *,
+    random_state: int | None = None,
+) -> np.ndarray:
     r"""Estimate SVM/SVR $\gamma$ based on 0.1 - 0.9 quantile of $||x-x'||^2$.
 
     Based on sigest function of kernlab. More details may be found here:
@@ -28,6 +46,8 @@ def sigest(x: np.ndarray, frac: float = 0.5, scale: bool = True) -> np.ndarray:
         The fraction of the data used to estimate the value
     scale: `bool`
         Whether to scale the input array or not. Defaults to True.
+    random_state: `int`, optional
+        Seed for the random sampling of pairs. Defaults to None (global numpy RNG).
 
     Returns
     -------
@@ -38,8 +58,9 @@ def sigest(x: np.ndarray, frac: float = 0.5, scale: bool = True) -> np.ndarray:
         x = (x - x.mean()) / x.std()
     m = np.shape(x)[0]
     n = int(frac * m)
-    index1 = np.random.choice(list(range(m)), size=n, replace=True)
-    index2 = np.random.choice(list(range(m)), size=n, replace=True)
+    rng = _rng(random_state)
+    index1 = rng.choice(list(range(m)), size=n, replace=True)
+    index2 = rng.choice(list(range(m)), size=n, replace=True)
     temp = x[index1, :] - x[index2, :]
     dist = np.sum(temp**2, axis=1)
     return 1 / np.quantile(dist[np.nonzero(dist)], q=[0.9, 0.5, 0.1])
@@ -71,6 +92,8 @@ def estimate_epsilon(
     Y: np.ndarray,
     ndegree: int = 5,
     half_features: bool = False,
+    *,
+    random_state: int | None = None,
 ) -> float:
     r"""Estimate SVR $\epsilon$ based on the noise variance.
 
@@ -90,6 +113,10 @@ def estimate_epsilon(
     half_features: `bool`
         Whether to use half of the features for faster estimations. Defaults to False.
 
+    random_state: `int`, optional
+        Seed for the random train/validation sampling. Defaults to None (global
+        numpy RNG).
+
     Returns
     -------
     `float`
@@ -98,7 +125,7 @@ def estimate_epsilon(
     """
     n, m = X.shape[0], X.shape[1]
     # Randomly select some data to use for training
-    index1 = np.random.choice(list(range(n)), size=int(n / 5), replace=True)
+    index1 = _rng(random_state).choice(list(range(n)), size=int(n / 5), replace=True)
     index2 = np.setdiff1d(list(range(n)), index1)
     features = np.arange(0, m, 2 if half_features else 1)
     # Create a multivariate polynomial fit

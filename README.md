@@ -121,10 +121,6 @@ sudo apt install build-essential
    git clone https://github.com/i-bec-org/spectra-xai
    cd spectra-xai && pip install .
    ```
-   _or_ run
-   ```
-   python setup.py install
-   ```
 
 2. [Optional] To install the development packages (e.g., if you want to edit this library) use:
     ```
