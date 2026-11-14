@@ -152,6 +152,174 @@ class _Explain:
         ax.set_ylabel(ylabel)
         return ax
 
+    @_styled_unless("ax")
+    def mean_spectrum(
+        self,
+        ax: Axes | None = None,
+        excluded_bands: Sequence[tuple[float, float]] | None = None,
+        **kwargs: Any,
+    ) -> Axes:
+        r"""Plot the mean spectrum ± standard deviation of the dataset.
+
+        Parameters
+        ----------
+        ax : Axes, optional
+            Matplotlib axes to plot into. If None, a new figure is created.
+
+        excluded_bands : sequence of tuple[float, float], optional
+            Inclusive wavelength intervals to leave blank, such as atmospheric
+            absorption bands.
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.plot` for the mean line (e.g.
+            ``color`` or ``label``); the ±SD band uses the same color.
+
+        Returns
+        -------
+        Axes
+            The matplotlib axes with the plot.
+
+        """
+
+        wavelengths = self._wavelengths()
+
+        bands = np.asarray(
+            excluded_bands if excluded_bands is not None else [],
+            dtype=float,
+        ).reshape(-1, 2)
+
+        if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
+            raise SpectraXAIValueError(
+                "excluded_bands must contain finite (start, end) wavelength pairs "
+                "with start <= end"
+            )
+
+        if ax is None:
+            _, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
+
+        order = np.argsort(wavelengths)
+        wavelengths = wavelengths[order]
+        spectra = np.asarray(self.dataset.X)[:, order]
+
+        mean = spectra.mean(axis=0)
+        sd = spectra.std(axis=0, ddof=1)
+
+        excluded = np.zeros(wavelengths.shape, dtype=bool)
+        for start, end in bands:
+            excluded |= (wavelengths >= start) & (wavelengths <= end)
+        is_valid = ~excluded
+
+        if is_valid.any():
+            # Find indices where validity changes or use split on consecutive indices
+            valid_indices = np.flatnonzero(is_valid)
+            # Split into arrays of continuous indices (where index difference > 1)
+            split_points = np.where(np.diff(valid_indices) > 1)[0] + 1
+            segments = np.split(valid_indices, split_points)
+
+            line_kwargs = {"linewidth": 1.5, **normalize_kwargs(kwargs, Line2D)}
+            color = line_kwargs.pop("color", None)
+            label = line_kwargs.pop("label", None)
+            for seg_idx in segments:
+                if len(seg_idx) == 0:
+                    continue
+
+                seg_x = wavelengths[seg_idx]
+                seg_mean = mean[seg_idx]
+                seg_lower = seg_mean - sd[seg_idx]
+                seg_upper = seg_mean + sd[seg_idx]
+
+                # Plot each continuous segment cleanly
+                line_plots = ax.plot(
+                    seg_x, seg_mean, color=color, label=label, **line_kwargs
+                )
+                label = None  # one legend entry for all segments
+                if color is None:
+                    color = line_plots[0].get_color()
+
+                ax.fill_between(
+                    seg_x,
+                    seg_lower,
+                    seg_upper,
+                    color=color,
+                    alpha=0.2,
+                    edgecolor=None,
+                )
+        return self._stylize_plot(ax)
+
+    @_styled_unless("ax")
+    def plot_selected_bands(
+        self,
+        support: Any,
+        ax: Axes | None = None,
+        excluded_bands: Sequence[tuple[float, float]] | None = None,
+        **kwargs: Any,
+    ) -> Axes:
+        """Shade the selected wavelengths over the mean spectrum ± SD.
+
+        Parameters
+        ----------
+        support: `np.ndarray` or fitted selector
+            A boolean mask (or integer indices) of the selected features, or a
+            fitted selector from `spectraxai.selection` (any object with
+            ``get_support()``).
+
+        ax: `plt.Axes`, optional
+            An optional matplotlib axes to plot into. Defaults to None, in which
+            case a new figure is created.
+
+        excluded_bands: sequence of tuple[float, float], optional
+            Wavelength intervals to leave blank in the mean spectrum (see
+            `PreHocAnalysis.mean_spectrum`).
+
+        **kwargs
+            Passed on to `matplotlib.axes.Axes.axvspan` for the shaded bands (e.g.
+            ``color`` or ``alpha``).
+
+        Returns
+        -------
+        `plt.Axes`
+            The matplotlib axes with the plot
+
+        """
+        if hasattr(support, "get_support"):
+            support = support.get_support()
+        support = np.asarray(support)
+        mask = np.zeros(self.dataset.n_features, dtype=bool)
+        if support.dtype == bool:
+            if support.shape != (self.dataset.n_features,):
+                raise SpectraXAIValueError(
+                    "support should have one value per input feature"
+                )
+            mask = support
+        else:
+            mask[support.astype(int)] = True
+        wavelengths = self._wavelengths()
+        ax = self.mean_spectrum(ax=ax, excluded_bands=excluded_bands)
+
+        order = np.argsort(wavelengths)
+        wvs, selected = wavelengths[order], mask[order]
+        # Each band spans half-way to its neighbours
+        mids = (wvs[1:] + wvs[:-1]) / 2
+        lower = np.concatenate(
+            ([wvs[0] - (mids[0] - wvs[0]) if mids.size else wvs[0] - 0.5], mids)
+        )
+        upper = np.concatenate(
+            (mids, [wvs[-1] + (wvs[-1] - mids[-1]) if mids.size else wvs[-1] + 0.5])
+        )
+        span_kwargs = {
+            "color": "tab:orange",
+            "alpha": 0.3,
+            "linewidth": 0,
+            "label": "Selected",
+            **normalize_kwargs(kwargs, Patch),
+        }
+        idx = np.flatnonzero(selected)
+        runs = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1) if idx.size else []
+        for run in runs:
+            ax.axvspan(float(lower[run[0]]), float(upper[run[-1]]), **span_kwargs)
+            span_kwargs["label"] = None  # one legend entry
+        return ax
+
 
 def _normalize_by_max(values: np.ndarray) -> np.ndarray:
     """Scale values so that the maximum is 1, leaving all-zero arrays unchanged."""
@@ -376,100 +544,6 @@ class PreHocAnalysis(_Explain):
             if i + 1 < self.dataset.n_outputs:
                 ax[i].set_xlabel("")
         return ax
-
-    @_styled_unless("ax")
-    def mean_spectrum(
-        self,
-        ax: Axes | None = None,
-        excluded_bands: Sequence[tuple[float, float]] | None = None,
-        **kwargs: Any,
-    ) -> Axes:
-        r"""Plot the mean spectrum ± standard deviation of the dataset.
-
-        Parameters
-        ----------
-        ax : Axes, optional
-            Matplotlib axes to plot into. If None, a new figure is created.
-
-        excluded_bands : sequence of tuple[float, float], optional
-            Inclusive wavelength intervals to leave blank, such as atmospheric
-            absorption bands.
-
-        **kwargs
-            Passed on to `matplotlib.axes.Axes.plot` for the mean line (e.g.
-            ``color`` or ``label``); the ±SD band uses the same color.
-
-        Returns
-        -------
-        Axes
-            The matplotlib axes with the plot.
-
-        """
-
-        wavelengths = self._wavelengths()
-
-        bands = np.asarray(
-            excluded_bands if excluded_bands is not None else [],
-            dtype=float,
-        ).reshape(-1, 2)
-
-        if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
-            raise SpectraXAIValueError(
-                "excluded_bands must contain finite (start, end) wavelength pairs "
-                "with start <= end"
-            )
-
-        if ax is None:
-            _, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
-
-        order = np.argsort(wavelengths)
-        wavelengths = wavelengths[order]
-        spectra = np.asarray(self.dataset.X)[:, order]
-
-        mean = spectra.mean(axis=0)
-        sd = spectra.std(axis=0, ddof=1)
-
-        excluded = np.zeros(wavelengths.shape, dtype=bool)
-        for start, end in bands:
-            excluded |= (wavelengths >= start) & (wavelengths <= end)
-        is_valid = ~excluded
-
-        if is_valid.any():
-            # Find indices where validity changes or use split on consecutive indices
-            valid_indices = np.flatnonzero(is_valid)
-            # Split into arrays of continuous indices (where index difference > 1)
-            split_points = np.where(np.diff(valid_indices) > 1)[0] + 1
-            segments = np.split(valid_indices, split_points)
-
-            line_kwargs = {"linewidth": 1.5, **normalize_kwargs(kwargs, Line2D)}
-            color = line_kwargs.pop("color", None)
-            label = line_kwargs.pop("label", None)
-            for seg_idx in segments:
-                if len(seg_idx) == 0:
-                    continue
-
-                seg_x = wavelengths[seg_idx]
-                seg_mean = mean[seg_idx]
-                seg_lower = seg_mean - sd[seg_idx]
-                seg_upper = seg_mean + sd[seg_idx]
-
-                # Plot each continuous segment cleanly
-                line_plots = ax.plot(
-                    seg_x, seg_mean, color=color, label=label, **line_kwargs
-                )
-                label = None  # one legend entry for all segments
-                if color is None:
-                    color = line_plots[0].get_color()
-
-                ax.fill_between(
-                    seg_x,
-                    seg_lower,
-                    seg_upper,
-                    color=color,
-                    alpha=0.2,
-                    edgecolor=None,
-                )
-        return self._stylize_plot(ax)
 
     @_styled_unless("axes")
     def mean_spectrum_by_range(

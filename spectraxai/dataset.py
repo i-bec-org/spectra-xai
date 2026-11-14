@@ -17,6 +17,7 @@ from typing import Any, overload
 
 import pandas
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.utils.multiclass import type_of_target
@@ -262,6 +263,67 @@ class DatasetSplit(str, Enum):
         return self.value
 
 
+def _clhs_objective(
+    data: np.ndarray, strata: np.ndarray, corr: np.ndarray, idx: np.ndarray, n: int
+) -> float:
+    """cLHS objective: strata coverage error plus correlation error."""
+    counts = np.stack(
+        [np.bincount(strata[idx, j], minlength=n) for j in range(data.shape[1])],
+        axis=1,
+    )
+    objective = float(np.abs(counts - 1).sum())
+    if data.shape[1] > 1:
+        objective += float(np.abs(np.corrcoef(data[idx], rowvar=False) - corr).sum())
+    return objective
+
+
+def _clhs(
+    data: np.ndarray, n: int, iterations: int, rng: np.random.Generator
+) -> np.ndarray:
+    """Conditioned Latin hypercube sampling (Minasny & McBratney, 2006).
+
+    Selects ``n`` rows of ``data`` (samples x continuous variables) so that each
+    variable's ``n`` quantile strata hold about one selected sample each and the
+    correlations between variables are preserved, using simulated annealing with
+    random swaps between selected and unselected samples.
+
+    Returns
+    -------
+    `np.ndarray`
+        The sorted indices of the selected samples.
+
+    """
+    n_samples, n_vars = data.shape
+    edges = np.quantile(data, np.linspace(0, 1, n + 1), axis=0)
+    strata = np.stack(
+        [
+            np.clip(np.searchsorted(edges[1:-1, j], data[:, j], side="right"), 0, n - 1)
+            for j in range(n_vars)
+        ],
+        axis=1,
+    )
+    corr = np.corrcoef(data, rowvar=False) if n_vars > 1 else np.ones((1, 1))
+    order = rng.permutation(n_samples)
+    selected, unselected = order[:n].copy(), order[n:].copy()
+    objective = _clhs_objective(data, strata, corr, selected, n)
+    best_objective, best = objective, selected.copy()
+    temperature, cooling = 1.0, 0.95
+    for iteration in range(iterations):
+        i, j = rng.integers(n), rng.integers(n_samples - n)
+        selected[i], unselected[j] = unselected[j], selected[i]
+        candidate = _clhs_objective(data, strata, corr, selected, n)
+        delta = candidate - objective
+        if delta <= 0 or rng.random() < np.exp(-delta / temperature):
+            objective = candidate
+            if objective < best_objective:
+                best_objective, best = objective, selected.copy()
+        else:  # undo the swap
+            selected[i], unselected[j] = unselected[j], selected[i]
+        if (iteration + 1) % 10 == 0:
+            temperature *= cooling
+    return np.sort(best)
+
+
 DataSplit = tuple[
     np.ndarray,
     np.ndarray,
@@ -412,6 +474,8 @@ class Dataset:
         *,
         random_state: int | None = None,
         n_bins: int = 10,
+        clhs_iterations: int = 5000,
+        clhs_components: int = 5,
     ) -> DataSplit:
         """Split dataset with passed split method to train and test.
 
@@ -422,17 +486,25 @@ class Dataset:
 
         opt: `Number`
             A float number (between 0 and 1) indicating the percentage of the
-            training dataset for Random and Kennard–Stone split. A natural number
-            for Cross Validation and Stratified split.
+            training dataset for Random, Kennard–Stone and cLHS split. A natural
+            number for Cross Validation and Stratified split.
 
         random_state: `int`, optional
-            Seed for the RANDOM, CROSS_VALIDATION and STRATIFIED splits. Defaults to
-            None (non-reproducible, as in earlier versions).
+            Seed for the RANDOM, CLHS, CROSS_VALIDATION and STRATIFIED splits.
+            Defaults to None (non-reproducible, as in earlier versions).
 
         n_bins: `int`, optional
             For the STRATIFIED split of a continuous output: the number of quantile
             bins of the (first) output used as strata. Class-like outputs (binary
             or multiclass) are stratified on their labels directly. Defaults to 10.
+
+        clhs_iterations: `int`, optional
+            For the CLHS split: the number of simulated-annealing iterations.
+            Defaults to 5000.
+
+        clhs_components: `int`, optional
+            For the CLHS split: the number of principal components of the
+            (standardized) spectra that the sample should cover. Defaults to 5.
 
         Returns
         -------
@@ -442,10 +514,14 @@ class Dataset:
 
         """
         indices = np.arange(self.X.shape[0])
-        if split == DatasetSplit.RANDOM or split == DatasetSplit.KENNARD_STONE:
+        if split in (
+            DatasetSplit.RANDOM,
+            DatasetSplit.KENNARD_STONE,
+            DatasetSplit.CLHS,
+        ):
             msg = (
                 "opt param should be a float in the (0, 1) range for "
-                "RANDOM and KENNARD_STONE splits"
+                "RANDOM, KENNARD_STONE and CLHS splits"
             )
             if not isinstance(opt, float):
                 raise TypeError(msg)
@@ -471,7 +547,20 @@ class Dataset:
             )
             return idx_trn, idx_tst
         elif split == DatasetSplit.CLHS:
-            raise NotImplementedError("clhs not implemented yet")
+            n_select = int(round(opt * self.n_samples))
+            if not 1 <= n_select < self.n_samples:
+                raise SpectraXAIValueError("opt leaves an empty training or test set")
+            n_components = max(
+                1, min(clhs_components, self.n_features, self.n_samples - 1)
+            )
+            scores = PCA(
+                n_components=n_components, random_state=random_state
+            ).fit_transform(StandardScaler().fit_transform(self.X))
+            idx_trn = _clhs(
+                scores, n_select, clhs_iterations, np.random.default_rng(random_state)
+            )
+            idx_tst = np.setdiff1d(indices, idx_trn)
+            return idx_trn, idx_tst
         elif split == DatasetSplit.CROSS_VALIDATION:
             assert isinstance(opt, int)
             kf = KFold(opt, shuffle=True, random_state=random_state)
@@ -584,6 +673,46 @@ class Dataset:
         if not np.logical_and(idx >= 0, idx < self.n_samples).all():
             raise SpectraXAIValueError("Indices contain out of bound values")
         return self._like(self.X[idx], self.Y[idx])
+
+    def select_features(self, features: np.ndarray | Sequence[int]) -> "Dataset":
+        """Keep only some input features (columns), e.g. after feature selection.
+
+        Parameters
+        ----------
+        features: `np.ndarray`
+            Either a boolean mask of length `n_features` or the integer indices of
+            the features to keep (in the given order).
+
+        Returns
+        -------
+        `Dataset`
+            A new Dataset with the selected columns of X and the matching
+            `X_names` and `wavelengths`.
+
+        """
+        features = np.asarray(features)
+        if features.dtype == bool:
+            if features.shape != (self.n_features,):
+                raise SpectraXAIValueError(
+                    "A boolean mask should have one value per input feature"
+                )
+            idx = np.flatnonzero(features)
+        else:
+            idx = features.astype(int).ravel()
+            if not np.logical_and(idx >= 0, idx < self.n_features).all():
+                raise SpectraXAIValueError(
+                    "Feature indices contain out of bound values"
+                )
+        if idx.size == 0:
+            raise SpectraXAIValueError("At least one feature should be selected")
+        wavelengths = self.wavelengths
+        return Dataset(
+            self.X[:, idx],
+            self.Y,
+            [self.X_names[i] for i in idx],
+            self.Y_names,
+            wavelengths=None if wavelengths is None else wavelengths[idx],
+        )
 
     def preprocess(self, method: SpectralPreprocessingSequence) -> "Dataset":
         """Preprocess dataset by method.

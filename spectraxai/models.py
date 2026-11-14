@@ -80,6 +80,17 @@ _DEFAULT_GRIDS: dict[Model, dict[str, Any]] = {
 dataset and are added at fit time)."""
 
 
+def _is_default_grid(model: Model, grid: dict[str, Any]) -> bool:
+    """Whether ``grid`` equals the default grid of ``model`` (e.g. after a clone)."""
+    default = _DEFAULT_GRIDS.get(model)
+    if default is None or set(grid) != set(default):
+        return False
+    return all(
+        np.array_equal(np.asarray(grid[k], dtype=object), np.asarray(v, dtype=object))
+        for k, v in default.items()
+    )
+
+
 class StandardModel(RegressorMixin, BaseEstimator):
     """Class with standard models for ML to apply on spectral datasets.
 
@@ -190,7 +201,11 @@ class StandardModel(RegressorMixin, BaseEstimator):
             processors).
 
         """
-        if init_hyperparameters and grid_search_hyperparameters:
+        if (
+            init_hyperparameters
+            and grid_search_hyperparameters
+            and not _is_default_grid(model, grid_search_hyperparameters)
+        ):
             raise SpectraXAIValueError(
                 "You cannot specify both init_hyperparameters and "
                 "grid_search_hyperparameters"

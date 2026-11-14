@@ -69,6 +69,25 @@ All notable changes to this project are documented here. See
   columns are kept. `return_permutation_importance=True` fills in the test-set
   permutation importance for models without one.
 
+- **Feature selection** (`spectraxai.selection`), scikit-learn compatible and
+  usable directly on a `Dataset` (`selector.fit(dataset).transform(dataset)`
+  returns a `Dataset` with matching `X_names` and `wavelengths`):
+  - `RFE` / `RFECV`: recursive feature elimination for any model, including
+    `StandardModel`. Importances are VIP for PLS, the model's own for RF,
+    XGBoost and Cubist, coefficients for linear models, and permutation
+    importance on the training data otherwise (e.g. SVR).
+  - `VIPSelector`: keep wavelengths with PLS VIP above a threshold (default 1).
+  - `SelectKBest`: keep the `k` wavelengths ranked highest by a pre-hoc
+    `FeatureRanking`.
+- `Dataset.select_features(mask_or_indices)`.
+- `plot_selected_bands(support, ax=...)` on `PreHocAnalysis` and
+  `PostHocAnalysis`: shades the selected wavelengths over the mean spectrum.
+  `mean_spectrum` is now also available on `PostHocAnalysis`.
+- `DatasetSplit.CLHS` is implemented: conditioned Latin hypercube sampling of the
+  training set on the first principal components of the spectra
+  (`train_test_split(DatasetSplit.CLHS, 0.8, random_state=...,
+  clhs_iterations=..., clhs_components=...)`).
+
 ### Changed (models)
 - `fit_and_predict` fits the pre-processing on the training samples and applies
   it to the test samples. For stateless pre-processing the results are identical
@@ -112,6 +131,8 @@ These fixes may change numeric results compared to 1.1.0.
   XGBoost.
 - `fit_and_predict(..., get_model=True)` ignored `get_model` for cross-validation
   folds.
+- `sklearn.base.clone` of a `StandardModel` with `init_hyperparameters` failed for
+  models with a default grid (SVR, RF, Cubist, XGBoost).
 - Mutual-information and F-statistic rankings divided by zero (NaN) for
   uninformative outputs.
 - `PostHocAnalysis.bar_plot_permutation_importance` labelled the y axis "Mean
