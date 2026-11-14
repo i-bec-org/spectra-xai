@@ -11,7 +11,29 @@
     <style>/*! theme.css */:root{--pdoc-background:#fff;}.pdoc{--text:#212529;--muted:#6c757d;--link:#3660a5;--link-hover:#1659c5;--code:#f8f8f8;--active:#fff598;--accent:#eee;--accent2:#c1c1c1;--nav-hover:rgba(255, 255, 255, 0.5);--name:#0066BB;--def:#008800;--annotation:#007020;}</style>
     <style>/*! layout.css */html, body{width:100%;height:100%;}html, main{scroll-behavior:smooth;}body{background-color:var(--pdoc-background);}@media (max-width:769px){#navtoggle{cursor:pointer;position:absolute;width:50px;height:40px;top:1rem;right:1rem;border-color:var(--text);color:var(--text);display:flex;opacity:0.8;z-index:999;}#navtoggle:hover{opacity:1;}#togglestate + div{display:none;}#togglestate:checked + div{display:inherit;}main, header{padding:2rem 3vw;}header + main{margin-top:-3rem;}.git-button{display:none !important;}nav input[type="search"]{max-width:77%;}nav input[type="search"]:first-child{margin-top:-6px;}nav input[type="search"]:valid ~ *{display:none !important;}}@media (min-width:770px){:root{--sidebar-width:clamp(12.5rem, 28vw, 22rem);}nav{position:fixed;overflow:auto;height:100vh;width:var(--sidebar-width);}main, header{padding:3rem 2rem 3rem calc(var(--sidebar-width) + 3rem);width:calc(54rem + var(--sidebar-width));max-width:100%;}header + main{margin-top:-4rem;}#navtoggle{display:none;}}#togglestate{position:absolute;height:0;opacity:0;}nav.pdoc{--pad:clamp(0.5rem, 2vw, 1.75rem);--indent:1.5rem;background-color:var(--accent);border-right:1px solid var(--accent2);box-shadow:0 0 20px rgba(50, 50, 50, .2) inset;padding:0 0 0 var(--pad);overflow-wrap:anywhere;scrollbar-width:thin; scrollbar-color:var(--accent2) transparent; z-index:1}nav.pdoc::-webkit-scrollbar{width:.4rem; }nav.pdoc::-webkit-scrollbar-thumb{background-color:var(--accent2); }nav.pdoc > div{padding:var(--pad) 0;}nav.pdoc .module-list-button{display:inline-flex;align-items:center;color:var(--text);border-color:var(--muted);margin-bottom:1rem;}nav.pdoc .module-list-button:hover{border-color:var(--text);}nav.pdoc input[type=search]{display:block;outline-offset:0;width:calc(100% - var(--pad));}nav.pdoc .logo{max-width:calc(100% - var(--pad));max-height:35vh;display:block;margin:0 auto 1rem;transform:translate(calc(-.5 * var(--pad)), 0);}nav.pdoc ul{list-style:none;padding-left:0;}nav.pdoc > div > ul{margin-left:calc(0px - var(--pad));}nav.pdoc li a{padding:.2rem 0 .2rem calc(var(--pad) + var(--indent));}nav.pdoc > div > ul > li > a{padding-left:var(--pad);}nav.pdoc li{transition:all 100ms;}nav.pdoc li:hover{background-color:var(--nav-hover);}nav.pdoc a, nav.pdoc a:hover{color:var(--text);}nav.pdoc a{display:block;}nav.pdoc > h2:first-of-type{margin-top:1.5rem;}nav.pdoc .class:before{content:"class ";color:var(--muted);}nav.pdoc .function:after{content:"()";color:var(--muted);}nav.pdoc footer:before{content:"";display:block;width:calc(100% - var(--pad));border-top:solid var(--accent2) 1px;margin-top:1.5rem;padding-top:.5rem;}nav.pdoc footer{font-size:small;}</style>
     <style>/*! content.css */.pdoc{color:var(--text);box-sizing:border-box;line-height:1.5;background:none;}.pdoc .pdoc-button{cursor:pointer;display:inline-block;border:solid black 1px;border-radius:2px;font-size:.75rem;padding:calc(0.5em - 1px) 1em;transition:100ms all;}.pdoc .alert{padding:1rem 1rem 1rem calc(1.5rem + 24px);border:1px solid transparent;border-radius:.25rem;background-repeat:no-repeat;background-position:.75rem center;margin-bottom:1rem;}.pdoc .alert > em{display:none;}.pdoc .alert > *:last-child{margin-bottom:0;}.pdoc .alert.note{color:#084298;background-color:#cfe2ff;border-color:#b6d4fe;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23084298%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M8%2016A8%208%200%201%200%208%200a8%208%200%200%200%200%2016zm.93-9.412-1%204.705c-.07.34.029.533.304.533.194%200%20.487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703%200-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381%202.29-.287zM8%205.5a1%201%200%201%201%200-2%201%201%200%200%201%200%202z%22/%3E%3C/svg%3E");}.pdoc .alert.tip{color:#0a3622;background-color:#d1e7dd;border-color:#a3cfbb;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%230a3622%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2%206a6%206%200%201%201%2010.174%204.31c-.203.196-.359.4-.453.619l-.762%201.769A.5.5%200%200%201%2010.5%2013a.5.5%200%200%201%200%201%20.5.5%200%200%201%200%201l-.224.447a1%201%200%200%201-.894.553H6.618a1%201%200%200%201-.894-.553L5.5%2015a.5.5%200%200%201%200-1%20.5.5%200%200%201%200-1%20.5.5%200%200%201-.46-.302l-.761-1.77a2%202%200%200%200-.453-.618A5.98%205.98%200%200%201%202%206m6-5a5%205%200%200%200-3.479%208.592c.263.254.514.564.676.941L5.83%2012h4.342l.632-1.467c.162-.377.413-.687.676-.941A5%205%200%200%200%208%201%22/%3E%3C/svg%3E");}.pdoc .alert.important{color:#055160;background-color:#cff4fc;border-color:#9eeaf9;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23055160%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2%200a2%202%200%200%200-2%202v12a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V2a2%202%200%200%200-2-2zm6%204c.535%200%20.954.462.9.995l-.35%203.507a.552.552%200%200%201-1.1%200L7.1%204.995A.905.905%200%200%201%208%204m.002%206a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E");}.pdoc .alert.warning{color:#664d03;background-color:#fff3cd;border-color:#ffecb5;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23664d03%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M8.982%201.566a1.13%201.13%200%200%200-1.96%200L.165%2013.233c-.457.778.091%201.767.98%201.767h13.713c.889%200%201.438-.99.98-1.767L8.982%201.566zM8%205c.535%200%20.954.462.9.995l-.35%203.507a.552.552%200%200%201-1.1%200L7.1%205.995A.905.905%200%200%201%208%205zm.002%206a1%201%200%201%201%200%202%201%201%200%200%201%200-2z%22/%3E%3C/svg%3E");}.pdoc .alert.caution{color:#842029;background-color:#f8d7da;border-color:#f5c2c7;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23842029%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M11.46.146A.5.5%200%200%200%2011.107%200H4.893a.5.5%200%200%200-.353.146L.146%204.54A.5.5%200%200%200%200%204.893v6.214a.5.5%200%200%200%20.146.353l4.394%204.394a.5.5%200%200%200%20.353.146h6.214a.5.5%200%200%200%20.353-.146l4.394-4.394a.5.5%200%200%200%20.146-.353V4.893a.5.5%200%200%200-.146-.353zM8%204c.535%200%20.954.462.9.995l-.35%203.507a.552.552%200%200%201-1.1%200L7.1%204.995A.905.905%200%200%201%208%204m.002%206a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E");}.pdoc .alert.danger{color:#842029;background-color:#f8d7da;border-color:#f5c2c7;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22%23842029%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M5.52.359A.5.5%200%200%201%206%200h4a.5.5%200%200%201%20.474.658L8.694%206H12.5a.5.5%200%200%201%20.395.807l-7%209a.5.5%200%200%201-.873-.454L6.823%209.5H3.5a.5.5%200%200%201-.48-.641l2.5-8.5z%22/%3E%3C/svg%3E");}.pdoc .visually-hidden{position:absolute !important;width:1px !important;height:1px !important;padding:0 !important;margin:-1px !important;overflow:hidden !important;clip:rect(0, 0, 0, 0) !important;white-space:nowrap !important;border:0 !important;}.pdoc h1, .pdoc h2, .pdoc h3{font-weight:300;margin:.3em 0;padding:.2em 0;}.pdoc > section:not(.module-info) h1{font-size:1.5rem;font-weight:500;}.pdoc > section:not(.module-info) h2{font-size:1.4rem;font-weight:500;}.pdoc > section:not(.module-info) h3{font-size:1.3rem;font-weight:500;}.pdoc > section:not(.module-info) h4{font-size:1.2rem;}.pdoc > section:not(.module-info) h5{font-size:1.1rem;}.pdoc a{text-decoration:none;color:var(--link);}.pdoc a:hover{color:var(--link-hover);}.pdoc blockquote{margin-left:2rem;}.pdoc pre{border-top:1px solid var(--accent2);border-bottom:1px solid var(--accent2);margin-top:0;margin-bottom:1em;padding:.5rem 0 .5rem .5rem;overflow-x:auto;background-color:var(--code);}.pdoc code{color:var(--text);padding:.2em .4em;margin:0;font-size:85%;background-color:var(--accent);border-radius:6px;}.pdoc a > code{color:inherit;}.pdoc pre > code{display:inline-block;font-size:inherit;background:none;border:none;padding:0;}.pdoc > section:not(.module-info){margin-bottom:1.5rem;}.pdoc .modulename{margin-top:0;font-weight:bold;}.pdoc .modulename a{color:var(--link);transition:100ms all;}.pdoc .git-button{float:right;border:solid var(--link) 1px;}.pdoc .git-button:hover{background-color:var(--link);color:var(--pdoc-background);}.view-source-toggle-state,.view-source-toggle-state ~ .pdoc-code{display:none;}.view-source-toggle-state:checked ~ .pdoc-code{display:block;}.view-source-button{display:inline-block;float:right;font-size:.75rem;line-height:1.5rem;color:var(--muted);padding:0 .4rem 0 1.3rem;cursor:pointer;text-indent:-2px;}.view-source-button > span{visibility:hidden;}.module-info .view-source-button{float:none;display:flex;justify-content:flex-end;margin:-1.2rem .4rem -.2rem 0;}.view-source-button::before{position:absolute;content:"View Source";display:list-item;list-style-type:disclosure-closed;}.view-source-toggle-state:checked ~ .attr .view-source-button::before,.view-source-toggle-state:checked ~ .view-source-button::before{list-style-type:disclosure-open;}.pdoc .docstring{margin-bottom:1.5rem;}.pdoc section:not(.module-info) .docstring{margin-left:clamp(0rem, 5vw - 2rem, 1rem);}.pdoc .docstring .pdoc-code{margin-left:1em;margin-right:1em;}.pdoc h1:target,.pdoc h2:target,.pdoc h3:target,.pdoc h4:target,.pdoc h5:target,.pdoc h6:target,.pdoc .pdoc-code > pre > span:target{background-color:var(--active);box-shadow:-1rem 0 0 0 var(--active);}.pdoc .pdoc-code > pre > span:target{display:block;}.pdoc div:target > .attr,.pdoc section:target > .attr,.pdoc dd:target > a{background-color:var(--active);}.pdoc *{scroll-margin:2rem;}.pdoc .pdoc-code .linenos{user-select:none;}.pdoc .attr:hover{filter:contrast(0.95);}.pdoc section, .pdoc .classattr{position:relative;}.pdoc .headerlink{--width:clamp(1rem, 3vw, 2rem);position:absolute;top:0;left:calc(0rem - var(--width));transition:all 100ms ease-in-out;opacity:0;}.pdoc .headerlink::before{content:"#";display:block;text-align:center;width:var(--width);height:2.3rem;line-height:2.3rem;font-size:1.5rem;}.pdoc .attr:hover ~ .headerlink,.pdoc *:target > .headerlink,.pdoc .headerlink:hover{opacity:1;}.pdoc .attr{display:block;margin:.5rem 0 .5rem;padding:.4rem .4rem .4rem 1rem;background-color:var(--accent);overflow-x:auto;}.pdoc .classattr{margin-left:2rem;}.pdoc .decorator-deprecated{color:#842029;}.pdoc .decorator-deprecated ~ span{filter:grayscale(1) opacity(0.8);}.pdoc .name{color:var(--name);font-weight:bold;}.pdoc .def{color:var(--def);font-weight:bold;}.pdoc .signature{background-color:transparent;}.pdoc .param, .pdoc .return-annotation{white-space:pre;}.pdoc .signature.multiline .param{display:block;}.pdoc .signature.condensed .param{display:inline-block;}.pdoc .annotation{color:var(--annotation);}.pdoc .view-value-toggle-state,.pdoc .view-value-toggle-state ~ .default_value{display:none;}.pdoc .view-value-toggle-state:checked ~ .default_value{display:inherit;}.pdoc .view-value-button{font-size:.5rem;vertical-align:middle;border-style:dashed;margin-top:-0.1rem;}.pdoc .view-value-button:hover{background:white;}.pdoc .view-value-button::before{content:"show";text-align:center;width:2.2em;display:inline-block;}.pdoc .view-value-toggle-state:checked ~ .view-value-button::before{content:"hide";}.pdoc .inherited{margin-left:2rem;}.pdoc .inherited dt{font-weight:700;}.pdoc .inherited dt, .pdoc .inherited dd{display:inline;margin-left:0;margin-bottom:.5rem;}.pdoc .inherited dd:not(:last-child):after{content:", ";}.pdoc .inherited .class:before{content:"class ";}.pdoc .inherited .function a:after{content:"()";}.pdoc .search-result .docstring{overflow:auto;max-height:25vh;}.pdoc .search-result.focused > .attr{background-color:var(--active);}.pdoc .attribution{margin-top:2rem;display:block;opacity:0.5;transition:all 200ms;filter:grayscale(100%);}.pdoc .attribution:hover{opacity:1;filter:grayscale(0%);}.pdoc .attribution img{margin-left:5px;height:27px;vertical-align:bottom;width:50px;transition:all 200ms;}.pdoc table{display:block;width:max-content;max-width:100%;overflow:auto;margin-bottom:1rem;}.pdoc table th{font-weight:600;}.pdoc table th, .pdoc table td{padding:6px 13px;border:1px solid var(--accent2);}</style>
-    <style>/*! custom.css */</style></head>
+    <style>/*! custom.css */</style><script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']]
+        }
+    };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+    /* Re-invoke MathJax when DOM content changes, for example during search. */
+    document.addEventListener("DOMContentLoaded", () => {
+        new MutationObserver(() => MathJax.typeset()).observe(
+            document.querySelector("main.pdoc").parentNode,
+            {childList: true}
+        );
+    })
+</script>
+<style>
+    mjx-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+</style></head>
 <body>
     <nav class="pdoc">
         <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
@@ -26,8 +48,13 @@
   <li><a href="#welcome-to-the-spectraxai-library">Welcome to the SpectraXAI library.</a>
   <ul>
     <li><a href="#features">Features</a></li>
+    <li><a href="#modules">Modules</a></li>
   </ul></li>
   <li><a href="#quickstart">Quickstart</a></li>
+  <li><a href="#changelog">Changelog</a>
+  <ul>
+    <li><a href="#120-2026-11-14">[1.2.0] — 2026-11-14</a></li>
+  </ul></li>
 </ul>
 
 
@@ -68,6 +95,24 @@ spectraxai    </h1>
 <ul>
 <li>Easy setup with pip</li>
 <li>Documented using pdoc following the numpydoc style</li>
+<li>scikit-learn compatible models, transformers and feature selectors</li>
+</ul>
+
+<h2 id="modules">Modules</h2>
+
+<ul>
+<li><code><a href="spectraxai/dataset.html">spectraxai.dataset</a></code>: the <code>Dataset</code> (spectra, outputs, wavelengths), scaling and
+splitting (random, Kennard–Stone, cLHS, cross-validation, stratified)</li>
+<li><code><a href="spectraxai/spectra.html">spectraxai.spectra</a></code>: spectral pre-processing (absorbance, SNV, MSC,
+Savitzky–Golay, continuum removal, ...)</li>
+<li><code><a href="spectraxai/preprocessing.html">spectraxai.preprocessing</a></code>: pre-processing as a scikit-learn transformer</li>
+<li><code><a href="spectraxai/models.html">spectraxai.models</a></code>: <code>StandardModel</code>, training and tuning PLS, SVR, RF, Cubist,
+XGBoost, Ridge, Lasso, Elastic Net, kNN, Gaussian processes, MLP or any
+scikit-learn regressor</li>
+<li><code><a href="spectraxai/selection.html">spectraxai.selection</a></code>: wavelength selection (RFE/RFECV, VIP, pre-hoc rankings)</li>
+<li><code><a href="spectraxai/explain.html">spectraxai.explain</a></code>: pre- and post-hoc explanations and their plots</li>
+<li><code><a href="spectraxai/plotting.html">spectraxai.plotting</a></code>: the conventions shared by all plots</li>
+<li><code><a href="spectraxai/data.html">spectraxai.data</a></code>: the bundled example datasets (vis–NIR and MIR soil spectra)</li>
 </ul>
 
 <h1 id="quickstart">Quickstart</h1>
@@ -92,22 +137,246 @@ plot the feature importance.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn"><a href="spectraxai/dataset.html">spectraxai.dataset</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">DatasetSplit</span>
 
 <span class="n">idx_trn</span><span class="p">,</span> <span class="n">idx_tst</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">train_test_split</span><span class="p">(</span><span class="n">DatasetSplit</span><span class="o">.</span><span class="n">KENNARD_STONE</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span>
-<span class="n">pls</span> <span class="o">=</span> <span class="n">StandardModel</span><span class="p">(</span><span class="n">Model</span><span class="o">.</span><span class="n">PLS</span><span class="p">)</span>
+<span class="n">pls</span> <span class="o">=</span> <span class="n">StandardModel</span><span class="p">(</span><span class="n">Model</span><span class="o">.</span><span class="n">PLS</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="n">results</span> <span class="o">=</span> <span class="n">pls</span><span class="o">.</span><span class="n">fit_and_predict</span><span class="p">(</span>
     <span class="n">dataset</span><span class="p">,</span>
     <span class="n">preprocess</span><span class="o">=</span><span class="p">(</span><span class="n">SpectralPreprocessing</span><span class="o">.</span><span class="n">SG1</span><span class="p">,</span> <span class="p">{</span><span class="s2">"window_length"</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">"polyorder"</span><span class="p">:</span> <span class="mi">3</span><span class="p">}),</span>
     <span class="n">idx_trn</span><span class="o">=</span><span class="n">idx_trn</span>
 <span class="p">)</span>
+<span class="n">results</span><span class="p">[[</span><span class="s2">"RMSE"</span><span class="p">,</span> <span class="s2">"R2"</span><span class="p">,</span> <span class="s2">"RPIQ"</span><span class="p">,</span> <span class="s2">"best_hyperparameters"</span><span class="p">]]</span>
 
-<span class="c1"># Plot the feature importance</span>
+<span class="c1"># Plot the feature importance (VIP) over the mean spectrum</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn"><a href="spectraxai/explain.html">spectraxai.explain</a></span><span class="w"> </span><span class="kn">import</span> <span class="n">PostHocAnalysis</span>
 
-<span class="n">xai</span> <span class="o">=</span> <span class="n">PostHocAnalysis</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-<span class="n">xai</span><span class="o">.</span><span class="n">bar_plot_importance</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"feature_importance"</span><span class="p">])</span>
+<span class="n">xai</span> <span class="o">=</span> <span class="n">PostHocAnalysis</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">preprocess</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">SpectralPreprocessing</span><span class="o">.</span><span class="n">SG1</span><span class="p">,</span> <span class="p">{</span><span class="s2">"window_length"</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">"polyorder"</span><span class="p">:</span> <span class="mi">3</span><span class="p">})</span>
+<span class="p">))</span>
+<span class="n">ax</span><span class="p">,</span> <span class="n">importance_ax</span> <span class="o">=</span> <span class="n">xai</span><span class="o">.</span><span class="n">plot_importance_spectrum</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"feature_importance"</span><span class="p">])</span>
 </code></pre>
 </div>
+
+<p>Every plot accepts a matplotlib <code>ax</code> (or <code>axes</code>), so it can be drawn into your
+own figures; see <code><a href="spectraxai/plotting.html">spectraxai.plotting</a></code>.</p>
+
+<!--
+SPDX-FileCopyrightText: 2026 Nikos Tsakiridis <tsakirin@auth.gr>
+
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
+<h1 id="changelog">Changelog</h1>
+
+<p>All notable changes to this project are documented here. The decisions behind
+1.2.0 are in <a href="https://github.com/tsakiridis/spectra-xai/blob/main/ROADMAP.md">ROADMAP.md</a>.</p>
+
+<h2 id="120-2026-11-14">[1.2.0] — 2026-11-14</h2>
+
+<h3 id="added">Added</h3>
+
+<ul>
+<li><code><a href="spectraxai/exceptions.html#SpectraXAIValueError">spectraxai.exceptions.SpectraXAIValueError</a></code>, raised for invalid arguments. It
+subclasses both <code>ValueError</code> and <code>AssertionError</code>, so existing
+<code>except AssertionError</code> / <code>except ValueError</code> handlers keep working.</li>
+<li><code>random_state</code> keyword argument (default <code>None</code>, i.e. the previous behaviour) on
+<code>StandardModel</code>, <code>Dataset.train_test_split</code>, <code>PreHocAnalysis</code>,
+<code>PostHocAnalysis</code>, <code>utils.sigest</code> and <code>utils.estimate_epsilon</code>.</li>
+<li><code>StandardModel.param_grid_</code>: the grid actually searched by the last <code>fit</code>.</li>
+<li><code>Dataset.train_test_split(..., n_bins=10)</code> for stratifying continuous outputs.</li>
+<li><p><code>SpectralPreprocessing.init_class</code> now parses everything <code>str()</code> produces for a
+pre-processing sequence (single members, members with options, nested lists,
+names or values), e.g. the <code>pre_process</code> column of <code>fit_and_predict</code>.</p></li>
+<li><p><strong>Plotting contract</strong> (<code><a href="spectraxai/plotting.html">spectraxai.plotting</a></code>). Every plot accepts axes to draw
+into, returns what it drew on, forwards extra keyword arguments to its main
+matplotlib call, and never changes global matplotlib state:</p>
+
+<ul>
+<li><code>PreHocAnalysis.correlogram(..., axes=)</code> and
+<code>PreHocAnalysis.mean_spectrum_by_range(..., axes=)</code> are new (keyword-only).</li>
+<li><code>**kwargs</code> on <code>PreHocAnalysis.bar_plot_importance</code>, <code>correlogram</code>,
+<code>mean_spectrum</code>, <code>mean_spectrum_by_range</code>, <code>PostHocAnalysis.bar_plot_importance</code>,
+<code>circular_bar_plot_importance</code>, <code>bar_plot_permutation_importance</code> and
+<code>utils.scatter_plot</code> (e.g. <code>color=</code>, <code>lw=</code>, <code>s=</code>, <code>label=</code>).</li>
+<li><code><a href="spectraxai/plotting.html#style">spectraxai.plotting.style()</a></code> context manager to apply the library's look to
+your own figures.</li>
+<li>Multi-output plots accept axes in any shape (e.g. from <code>plt.subplots(1, 2)</code>).</li>
+</ul></li>
+<li><p><strong>scikit-learn interface.</strong> <code>StandardModel</code> is now a scikit-learn regressor
+(<code>BaseEstimator</code>, <code>RegressorMixin</code>): it works with <code>clone</code>, pipelines,
+<code>GridSearchCV</code>, <code>cross_val_score</code>, <code>permutation_importance</code> and SAGE.</p>
+
+<ul>
+<li><code>fit</code> also accepts <code>fit(X, y)</code> and returns <code>self</code>; <code>fit(dataset)</code> and
+<code>fit(dataset, cv=...)</code> work as before.</li>
+<li>New constructor keywords: <code>estimator=</code>, <code>cv=</code> (default 5), <code>n_jobs=</code> (default
+-1).</li>
+<li><code>Model.CUSTOM</code> + <code>estimator=</code> trains any scikit-learn regressor (cloned, never
+modified), with or without a grid search.</li>
+<li>New <code>pipeline_</code> (SVR scaler + <code>best_model</code>), used by <code>predict</code>; <code>predict</code>
+also accepts a <code>Dataset</code> and checks the number of features.</li>
+<li>New <code>StandardModel.feature_importance()</code> returning <code>(importance, method)</code>.</li>
+<li><code>PostHocAnalysis.bar_plot_permutation_importance</code> and <code>sage_importance</code>
+accept a <code>StandardModel</code> directly. For SVR this is the correct way: passing
+<code>best_model</code> skips the input scaling.</li>
+</ul></li>
+<li><code><a href="spectraxai/preprocessing.html#SpectralPreprocessor">spectraxai.preprocessing.SpectralPreprocessor</a></code>, a scikit-learn transformer for
+any <code>SpectralPreprocessingSequence</code>.</li>
+<li>New pre-processing: <code>SpectralPreprocessing.MSC</code>, <code>DETREND</code> and <code>MEAN_CENTER</code>
+(and <code>Spectra.msc</code>, <code>detrend</code>, <code>mean_center</code>). The stateful ones learn their
+reference from the training samples in <code>fit_and_predict</code> and in
+<code>SpectralPreprocessor</code>, and from the given spectra in <code>Spectra.preprocess</code>.</li>
+<li><code>Dataset.wavelengths</code> (from numeric <code>X_names</code>, or the new <code>wavelengths=</code>
+constructor argument), used by continuum removal and the spectral plots;
+<code>Spectra(X, wavelengths=)</code> and <code>Spectra.cr(wavelengths=)</code>.</li>
+<li><code>Dataset.to_dataframe()</code>.</li>
+<li><p><strong>Unified results.</strong> Every <code>fit_and_predict</code> row now also has <code>model_name</code>,
+<code>best_hyperparameters</code> (dict), <code>feature_importance</code> (array or None, now also
+for SVR), <code>importance_method</code> (<code>"VIP"</code>, <code>"impurity"</code>, <code>"usage"</code>, <code>"gain"</code>,
+<code>"coef"</code>, <code>"native"</code>, <code>"permutation"</code> or None) and <code>random_state</code>. All existing
+columns are kept. <code>return_permutation_importance=True</code> fills in the test-set
+permutation importance for models without one.</p></li>
+<li><p><strong>Feature selection</strong> (<code><a href="spectraxai/selection.html">spectraxai.selection</a></code>), scikit-learn compatible and
+usable directly on a <code>Dataset</code> (<code>selector.fit(dataset).transform(dataset)</code>
+returns a <code>Dataset</code> with matching <code>X_names</code> and <code>wavelengths</code>):</p>
+
+<ul>
+<li><code>RFE</code> / <code>RFECV</code>: recursive feature elimination for any model, including
+<code>StandardModel</code>. Importances are VIP for PLS, the model's own for RF,
+XGBoost and Cubist, coefficients for linear models, and permutation
+importance on the training data otherwise (e.g. SVR).</li>
+<li><code>VIPSelector</code>: keep wavelengths with PLS VIP above a threshold (default 1).</li>
+<li><code>SelectKBest</code>: keep the <code>k</code> wavelengths ranked highest by a pre-hoc
+<code>FeatureRanking</code>.</li>
+</ul></li>
+<li><code>Dataset.select_features(mask_or_indices)</code>.</li>
+<li><code>plot_selected_bands(support, ax=...)</code> on <code>PreHocAnalysis</code> and
+<code>PostHocAnalysis</code>: shades the selected wavelengths over the mean spectrum.
+<code>mean_spectrum</code> is now also available on <code>PostHocAnalysis</code>.</li>
+<li><p><code>DatasetSplit.CLHS</code> is implemented: conditioned Latin hypercube sampling of the
+training set on the first principal components of the spectra
+(<code>train_test_split(DatasetSplit.CLHS, 0.8, random_state=...,
+clhs_iterations=..., clhs_components=...)</code>).</p></li>
+<li><p><strong>New models</strong>: <code>Model.RIDGE</code>, <code>LASSO</code>, <code>ELASTIC_NET</code>, <code>KNN</code>, <code>GPR</code> (scaled RBF
+plus white-noise kernel, tuned by marginal likelihood) and <code>MLP</code>, each with a
+default grid. They all standardize their inputs (the scaler is part of
+<code>pipeline_</code>) and support several outputs; the linear models report their
+absolute standardized coefficients as feature importance (<code>"coef"</code>).</p></li>
+<li><strong>New explanation plots</strong> on <code>PostHocAnalysis</code> (all following the plotting
+contract):
+<ul>
+<li><code>plot_importance_spectrum(importance_or_model, ax=...)</code>: importance on a twin
+axis over the mean spectrum ± SD; returns <code>(ax, importance_ax)</code>.</li>
+<li><code>plot_pls_coefficients(model, ax=...)</code>: PLS regression coefficients per
+wavelength, one line per output.</li>
+<li><code>plot_sage_importance(explanation_or_model, ax=...)</code>: SAGE values with their
+standard deviation as error bars.</li>
+</ul></li>
+<li><p><strong>Optional SHAP support</strong> (<code>pip install spectraxai[shap]</code>):
+<code>PostHocAnalysis.shap_importance(model, X=None, background=50)</code> (model-agnostic
+permutation explainer) and <code>plot_shap_summary(explanation_or_model, ax=...)</code>
+(mean |SHAP| per wavelength).</p></li>
+<li><p><code>SpectralPreprocessor</code> supports <code>get_feature_names_out</code> and
+<code>set_output(transform="pandas")</code>.</p></li>
+<li><p><strong>Documentation and examples</strong>: a new
+<a href="https://github.com/tsakiridis/spectra-xai/blob/main/examples/pycaret/pycaretIntegration.ipynb">PyCaret example</a> (PyCaret 4.0
+<code>RegressionExperiment</code> with spectraxai pipelines and <code>StandardModel</code>); the example
+notebooks cover the new models, pipelines, stateful pre-processing, feature
+selection, cLHS and the new plots; README and package quickstart updated.</p></li>
+<li><p><strong>Mid-infrared spectra.</strong> <code>Dataset(..., spectral_unit="cm-1")</code> (also <code>"nm"</code>,
+<code>"um"</code>; new <code>spectral_unit</code>, <code>is_wavenumber</code> and <code>spectral_label</code> attributes,
+kept by <code>subset</code>, <code>preprocess</code> and <code>select_features</code>). Spectral plots are
+labelled "Wavenumber (cm⁻¹)" and drawn from high to low wavenumber whatever
+the column order, including bar plots; the default (no unit) is unchanged.
+<code>load_GR_SSL</code> now sets <code>spectral_unit="nm"</code> (axes read "Wavelength (nm)").</p></li>
+<li><code><a href="spectraxai/data.html#load_GB_MIR">spectraxai.data.load_GB_MIR()</a></code>: MIR absorbance spectra (4000–400 cm⁻¹) of 427
+soils of the Countryside Survey of Great Britain 2007 (Keith et al., 2020,
+Open Government Licence v3.0), stored from high to low wavenumber.</li>
+<li><code>excluded_bands</code> pairs may be given in either order, e.g. <code>(2400, 2280)</code>.</li>
+<li>New example scripts with descriptive names: <code>quickstart.py</code> and
+<code>compare_pretreatments.py</code> (formerly <code>example2.py</code> and <code>example1.py</code>) and
+<code>select_wavelengths.py</code>; new <code>mirSpectra.ipynb</code> notebook.</li>
+</ul>
+
+<h3 id="changed-models">Changed (models)</h3>
+
+<ul>
+<li><code>fit_and_predict</code> fits the pre-processing on the training samples and applies
+it to the test samples. For stateless pre-processing the results are identical
+to 1.1.0.</li>
+<li>Continuum removal in <code>Dataset.preprocess</code> / <code>fit_and_predict</code> uses the
+dataset's wavelengths when known. For evenly spaced wavelengths (e.g. the
+bundled SSL) results are identical; for unevenly spaced ones they are now
+correct.</li>
+<li>Passing <code>cv</code> positionally to <code>StandardModel.fit(dataset, cv)</code> is deprecated
+(<code>DeprecationWarning</code>); use <code>cv=</code>.</li>
+<li>Requires scikit-learn &gt;= 1.6.</li>
+</ul>
+
+<h3 id="changed-plots">Changed (plots)</h3>
+
+<ul>
+<li>Constructing <code>PreHocAnalysis</code> / <code>PostHocAnalysis</code> no longer calls
+<code>plt.style.use("seaborn-v0_8-whitegrid")</code> globally. Figures the library creates
+are still drawn in that style; to keep it for your own figures use
+<code>with <a href="spectraxai/plotting.html#style">spectraxai.plotting.style()</a>:</code> (or call <code>plt.style.use</code> yourself).</li>
+<li>Plots drawn into axes you supply keep your style; <code>correlogram</code> only calls
+<code>tight_layout</code> on figures it created.</li>
+<li><code>circular_bar_plot_importance</code> no longer hides the frame of whatever axes was
+current; it raises if the supplied <code>ax</code> is not polar.</li>
+<li><code>utils.scatter_plot</code> accepts <code>(n, 1)</code> columns (e.g. PLS predictions) and is
+styled like the other plots when it creates the figure.</li>
+</ul>
+
+<h3 id="fixed">Fixed</h3>
+
+<p>These fixes may change numeric results compared to 1.1.0.</p>
+
+<ul>
+<li><strong>Grid search state leaked between fits.</strong> <code>StandardModel.fit</code> stored the
+dataset-dependent SVR <code>gamma</code> grid and PLS <code>n_components</code> grid in
+<code>grid_search_hyperparameters</code>, so every later fit (other folds, other
+pre-processings in <code>fit_and_predict_multiple</code>, other datasets) reused the grid
+computed for the first one. Grids are now computed per fit.</li>
+<li>Index bounds checks in <code>Dataset.subset</code> and <code>Dataset.train_test_split_explicit</code>
+accepted <code>n_samples</code> as a valid index.</li>
+<li><code>DatasetSplit.STRATIFIED</code> failed on continuous outputs; it now stratifies on
+quantile bins of the (first) output. Class-like outputs are stratified on their
+labels exactly as before.</li>
+<li><code>fit_and_predict</code> raised <code>KeyError</code> for SVR/RF/Cubist when <code>init_hyperparameters</code>
+did not contain every reported hyperparameter; missing values now fall back to
+the estimator's own.</li>
+<li><code>fit_and_predict</code> now reports hyperparameters and <code>feature_importance</code> for
+XGBoost.</li>
+<li><code>fit_and_predict(..., get_model=True)</code> ignored <code>get_model</code> for cross-validation
+folds.</li>
+<li><code>sklearn.base.clone</code> of a <code>StandardModel</code> with <code>init_hyperparameters</code> failed for
+models with a default grid (SVR, RF, Cubist, XGBoost).</li>
+<li>Mutual-information and F-statistic rankings divided by zero (NaN) for
+uninformative outputs.</li>
+<li><code>PostHocAnalysis.bar_plot_permutation_importance</code> labelled the y axis "Mean
+decrease in impurity"; it is now "Mean decrease in score".</li>
+<li><code>continuum_removal</code> ignored <code>wvs</code> for 2-D inputs.</li>
+<li><code>continuum_removal</code> gave wrong results for wavelengths stored in decreasing
+order (e.g. MIR wavenumbers from 4000 to 400 cm⁻¹).</li>
+<li>In Jupyter, when the first figure of a session was created by a spectraxai plot,
+no later figure was displayed (<code><a href="spectraxai/plotting.html#style">spectraxai.plotting.style()</a></code> now keeps the
+interactive mode that the notebook backend switches on).</li>
+<li><code>Spectra.preprocess</code> silently returned <code>None</code> for unknown methods; it now raises.</li>
+</ul>
+
+<h3 id="changed">Changed</h3>
+
+<ul>
+<li>Project URLs (README, package metadata) point to
+<a href="https://github.com/tsakiridis/spectra-xai">https://github.com/tsakiridis/spectra-xai</a> and its GitHub Pages documentation.</li>
+<li>Packaging moved from <code>setup.py</code> to <code>pyproject.toml</code> (same dependencies).</li>
+<li>Tests run with pytest, with fast synthetic fixtures; the SSL-based model tests
+are marked <code>slow</code>. CI also runs flake8, black, pyright and the examples.</li>
+<li>CI moved from Azure Pipelines to GitHub Actions (<code>.github/workflows/ci.yml</code>):
+tests on Python 3.13–3.15, lint and type checks, REUSE licensing, and the
+example scripts and notebooks.</li>
+</ul>
 </div>
 
                         <input id="mod-spectraxai-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -126,44 +395,68 @@ plot the feature importance.</p>
 </span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a>
 </span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="sd"> - Easy setup with pip</span>
 </span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a><span class="sd"> - Documented using pdoc following the numpydoc style</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="sd"># Quickstart</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="sd">As an example, we quickly develop a PLS model for a dataset and</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="sd">plot the feature importance.</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">```python</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="sd">"""</span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="sd">A small `spectraxai` example.</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="sd">"""</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="sd"># Load the dataset</span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a><span class="sd">from spectraxai.data import load_GR_SSL</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="sd">dataset = load_GR_SSL()</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>
-</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a><span class="sd"># Apply SG1 on the spectra and train &amp; test a PLS model</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="sd"> - scikit-learn compatible models, transformers and feature selectors</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>
+</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="sd">## Modules</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a>
+</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="sd"> - `spectraxai.dataset`: the `Dataset` (spectra, outputs, wavelengths), scaling and</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">   splitting (random, Kennard–Stone, cLHS, cross-validation, stratified)</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="sd"> - `spectraxai.spectra`: spectral pre-processing (absorbance, SNV, MSC,</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="sd">   Savitzky–Golay, continuum removal, ...)</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="sd"> - `spectraxai.preprocessing`: pre-processing as a scikit-learn transformer</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a><span class="sd"> - `spectraxai.models`: `StandardModel`, training and tuning PLS, SVR, RF, Cubist,</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="sd">   XGBoost, Ridge, Lasso, Elastic Net, kNN, Gaussian processes, MLP or any</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a><span class="sd">   scikit-learn regressor</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a><span class="sd"> - `spectraxai.selection`: wavelength selection (RFE/RFECV, VIP, pre-hoc rankings)</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="sd"> - `spectraxai.explain`: pre- and post-hoc explanations and their plots</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a><span class="sd"> - `spectraxai.plotting`: the conventions shared by all plots</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a><span class="sd"> - `spectraxai.data`: the bundled example datasets (vis–NIR and MIR soil spectra)</span>
 </span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>
-</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="sd">from spectraxai.models import Model, StandardModel</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="sd">from spectraxai.spectra import SpectralPreprocessing</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="sd">from spectraxai.dataset import DatasetSplit</span>
-</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a>
-</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a><span class="sd">idx_trn, idx_tst = dataset.train_test_split(DatasetSplit.KENNARD_STONE, 0.8)</span>
-</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a><span class="sd">pls = StandardModel(Model.PLS)</span>
-</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a>
-</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="sd">results = pls.fit_and_predict(</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="sd">    dataset,</span>
-</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a><span class="sd">    preprocess=(SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3}),</span>
-</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a><span class="sd">    idx_trn=idx_trn</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="sd">)</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a>
-</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a><span class="sd"># Plot the feature importance</span>
-</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a>
-</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a><span class="sd">from spectraxai.explain import PostHocAnalysis</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a>
-</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">xai = PostHocAnalysis(dataset)</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">xai.bar_plot_importance(results.iloc[0]["feature_importance"])</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a><span class="sd">```</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a><span class="sd">'''</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="sd"># Quickstart</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a>
+</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="sd">As an example, we quickly develop a PLS model for a dataset and</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="sd">plot the feature importance.</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a><span class="sd">```python</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a><span class="sd">"""</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a><span class="sd">A small `spectraxai` example.</span>
+</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="sd">"""</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a>
+</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a><span class="sd"># Load the dataset</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a>
+</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="sd">from spectraxai.data import load_GR_SSL</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="sd">dataset = load_GR_SSL()</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a>
+</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a><span class="sd"># Apply SG1 on the spectra and train &amp; test a PLS model</span>
+</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a>
+</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a><span class="sd">from spectraxai.models import Model, StandardModel</span>
+</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">from spectraxai.spectra import SpectralPreprocessing</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">from spectraxai.dataset import DatasetSplit</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>
+</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a><span class="sd">idx_trn, idx_tst = dataset.train_test_split(DatasetSplit.KENNARD_STONE, 0.8)</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a><span class="sd">pls = StandardModel(Model.PLS, random_state=0)</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>
+</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a><span class="sd">results = pls.fit_and_predict(</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a><span class="sd">    dataset,</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a><span class="sd">    preprocess=(SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3}),</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a><span class="sd">    idx_trn=idx_trn</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a><span class="sd">)</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a><span class="sd">results[["RMSE", "R2", "RPIQ", "best_hyperparameters"]]</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>
+</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a><span class="sd"># Plot the feature importance (VIP) over the mean spectrum</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a>
+</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a><span class="sd">from spectraxai.explain import PostHocAnalysis</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>
+</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a><span class="sd">xai = PostHocAnalysis(dataset.preprocess(</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a><span class="sd">    (SpectralPreprocessing.SG1, {"window_length": 7, "polyorder": 3})</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a><span class="sd">))</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a><span class="sd">ax, importance_ax = xai.plot_importance_spectrum(results.iloc[0]["feature_importance"])</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a><span class="sd">```</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>
+</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a><span class="sd">Every plot accepts a matplotlib ``ax`` (or ``axes``), so it can be drawn into your</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a><span class="sd">own figures; see `spectraxai.plotting`.</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>
+</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a><span class="sd">.. include:: ../CHANGELOG.md</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a><span class="sd">'''</span>
 </span></pre></div>
 
 

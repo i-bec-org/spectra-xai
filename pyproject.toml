@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spectraxai"
-version = "1.2.0.dev0"
+version = "1.2.0"
 description = "eXplainable Artificial Intelligence for spectral datasets"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -46,15 +46,15 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/i-bec-org/spectra-xai"
-Documentation = "https://portfolio.i-bec.org/spectraxai/spectraxai.html"
-Issues = "https://github.com/i-bec-org/spectra-xai/issues"
+Homepage = "https://github.com/tsakiridis/spectra-xai"
+Documentation = "https://tsakiridis.github.io/spectra-xai/spectraxai.html"
+Issues = "https://github.com/tsakiridis/spectra-xai/issues"
 
 [tool.setuptools.packages.find]
 include = ["spectraxai", "spectraxai.*"]
 
 [tool.setuptools.package-data]
-spectraxai = ["py.typed", "data/SSL_GR.csv"]
+spectraxai = ["py.typed", "data/SSL_GR.csv", "data/MIR_GB_CS2007.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

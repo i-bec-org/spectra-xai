@@ -321,3 +321,12 @@ def test_stateful_preprocessing_does_not_leak(synthetic: Dataset) -> None:
     assert res.loc[0, "RMSE"] == pytest.approx(
         np.sqrt(np.mean((synthetic.Y[tst, 0] - np.ravel(y_hat)) ** 2))
     )
+
+
+def test_preprocessor_supports_pandas_output(synthetic: Dataset) -> None:
+    frame = synthetic.to_dataframe().iloc[:, : synthetic.n_features]
+    pre = SpectralPreprocessor(SP.SNV).set_output(transform="pandas")
+    out = pre.fit_transform(frame)
+    assert isinstance(out, pandas.DataFrame)
+    assert list(out.columns) == list(frame.columns)
+    np.testing.assert_allclose(out.to_numpy(), Spectra(synthetic.X).snv().X)

@@ -94,15 +94,40 @@ class _Explain:
                 "The number of bars should equal the number of input features"
             )
 
-    def _stylize_plot(self, ax: Axes) -> Axes:
+    def _stylize_plot(self, ax: Axes, index_axis: bool = False) -> Axes:
+        """Style an axes whose x axis is spectral.
+
+        ``index_axis`` tells whether x holds feature indices (bar plots) rather
+        than wavelengths. Wavenumber axes are drawn from high to low.
+
+        """
         ax.xaxis.set_major_locator(MaxNLocator(nbins="auto"))
         ax.yaxis.set_minor_locator(AutoMinorLocator())
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.grid(which="minor", linewidth=0.6, alpha=0.3)
         ax.tick_params(direction="out", which="major", length=6, width=1)
         ax.tick_params(direction="out", which="minor", length=3, width=1)
-        ax.set_xlabel("Wavelength")
+        ax.set_xlabel(self.dataset.spectral_label)
+        self._orient_spectral_axis(ax, index_axis)
         return ax
+
+    def _orient_spectral_axis(self, ax: Axes, index_axis: bool) -> None:
+        """Draw wavenumbers from high to low and wavelengths from low to high.
+
+        Idempotent, so it can be applied more than once to the same axes.
+
+        """
+        wavelengths = self.dataset.wavelengths
+        if index_axis:
+            if wavelengths is None or wavelengths.size < 2:
+                return
+            # Feature indices follow the column order of the data
+            ascending_data = bool(wavelengths[-1] > wavelengths[0])
+            inverted = ascending_data == self.dataset.is_wavenumber
+        else:
+            inverted = self.dataset.is_wavenumber
+        if ax.xaxis_inverted() != inverted:
+            ax.invert_xaxis()
 
     def _bar_plot(
         self,
@@ -148,7 +173,7 @@ class _Explain:
         pos = np.arange(len(height))
         ax.bar(pos, height, yerr=yerr, **kwargs)
         ax.set_xticks(pos, [str(name) for name in self.dataset.X_names])
-        ax = self._stylize_plot(ax)
+        ax = self._stylize_plot(ax, index_axis=True)
         ax.set_ylabel(ylabel)
         return ax
 
@@ -188,10 +213,10 @@ class _Explain:
             dtype=float,
         ).reshape(-1, 2)
 
-        if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
+        bands = np.sort(bands, axis=1)  # accept (high, low) wavenumber pairs
+        if not np.isfinite(bands).all():
             raise SpectraXAIValueError(
-                "excluded_bands must contain finite (start, end) wavelength pairs "
-                "with start <= end"
+                "excluded_bands must contain finite (start, end) wavelength pairs"
             )
 
         if ax is None:
@@ -540,7 +565,7 @@ class PreHocAnalysis(_Explain):
         for i, corr in enumerate(metric):
             self._bar_plot(height=corr, ax=ax[i], ylabel=method.value, **kwargs)
             ax[i].set_title(self.dataset.Y_names[i])
-            self._stylize_plot(ax[i])
+            self._stylize_plot(ax[i], index_axis=True)
             if i + 1 < self.dataset.n_outputs:
                 ax[i].set_xlabel("")
         return ax
@@ -610,10 +635,10 @@ class PreHocAnalysis(_Explain):
             dtype=float,
         ).reshape(-1, 2)
 
-        if not np.isfinite(bands).all() or np.any(bands[:, 0] > bands[:, 1]):
+        bands = np.sort(bands, axis=1)  # accept (high, low) wavenumber pairs
+        if not np.isfinite(bands).all():
             raise SpectraXAIValueError(
-                "excluded_bands must contain finite (start, end) wavelength pairs "
-                "with start <= end"
+                "excluded_bands must contain finite (start, end) wavelength pairs"
             )
 
         if axes is None:

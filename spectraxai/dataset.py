@@ -324,6 +324,29 @@ def _clhs(
     return np.sort(best)
 
 
+_UNITS = {
+    "nm": "nm",
+    "um": "um",
+    "µm": "um",
+    "micron": "um",
+    "cm-1": "cm-1",
+    "cm^-1": "cm-1",
+    "cm⁻¹": "cm-1",
+    "1/cm": "cm-1",
+}
+
+
+def _normalize_unit(unit: str | None) -> str | None:
+    if unit is None:
+        return None
+    key = str(unit).strip().lower().replace(" ", "")
+    if key not in _UNITS:
+        raise SpectraXAIValueError(
+            f"Unknown spectral unit {unit!r}; use 'nm', 'um' or 'cm-1'"
+        )
+    return _UNITS[key]
+
+
 DataSplit = tuple[
     np.ndarray,
     np.ndarray,
@@ -356,20 +379,24 @@ class Dataset:
     Y: np.ndarray
     """The output properties of size (`n_samples`, `n_outputs`)"""
 
-    X_names: list[str | int]
+    X_names: list[str | int | float]
     """The names of the input features of size (`n_features`)"""
 
     Y_names: list[str]
     """The names of the output properties of size (`n_outputs`)"""
 
+    spectral_unit: str | None
+    """The unit of `wavelengths`: ``"nm"``, ``"um"``, ``"cm-1"`` or None."""
+
     def __init__(
         self,
         X: np.ndarray | pandas.DataFrame,
         Y: np.ndarray | pandas.DataFrame | pandas.Series,
-        X_names: Sequence[str | int] | np.ndarray | None = None,
+        X_names: Sequence[str | int | float] | np.ndarray | None = None,
         Y_names: Sequence[str] | np.ndarray | None = None,
         *,
         wavelengths: Sequence[float] | np.ndarray | None = None,
+        spectral_unit: str | None = None,
     ) -> None:
         """Create a new Dataset from input and output arrays.
 
@@ -395,6 +422,15 @@ class Dataset:
         wavelengths: sequence of `float`, optional
             The wavelength of each input feature, of length `n_features`. If
             missing, `wavelengths` is derived from `X_names` when these are numeric.
+            For mid-infrared data these are wavenumbers (see ``spectral_unit``).
+
+        spectral_unit: `str`, optional
+            The unit of `wavelengths`: ``"nm"``, ``"um"`` or ``"cm-1"`` (also
+            accepted: ``"µm"``, ``"cm^-1"``, ``"1/cm"``). With ``"cm-1"``
+            (wavenumbers, e.g. MIR spectra) plots label the axis "Wavenumber
+            (cm⁻¹)" and draw it from high to low, as is customary, whatever the
+            order of the columns. Defaults to None (unknown; axes are labelled
+            "Wavelength").
 
         """
         if isinstance(X, pandas.DataFrame):
@@ -419,6 +455,7 @@ class Dataset:
             raise SpectraXAIValueError("Y_names should have the same n_outputs as Y")
         self.X_names = x_names or ["X" + str(i + 1) for i in range(self.n_features)]
         self.Y_names = y_names or ["Y" + str(i + 1) for i in range(self.n_outputs)]
+        self.spectral_unit = _normalize_unit(spectral_unit)
         self._wavelengths = None
         if wavelengths is not None:
             wvs = np.asarray(wavelengths, dtype=float).ravel()
@@ -445,9 +482,31 @@ class Dataset:
             return None
         return wvs if np.isfinite(wvs).all() else None
 
+    @property
+    def is_wavenumber(self) -> bool:
+        """Whether the spectral axis is in wavenumbers (``spectral_unit="cm-1"``)."""
+        return self.spectral_unit == "cm-1"
+
+    @property
+    def spectral_label(self) -> str:
+        """Axis label of the spectral dimension, e.g. ``"Wavenumber (cm$^{-1}$)"``."""
+        return {
+            None: "Wavelength",
+            "nm": "Wavelength (nm)",
+            "um": "Wavelength (µm)",
+            "cm-1": "Wavenumber (cm$^{-1}$)",
+        }[self.spectral_unit]
+
     def _like(self, X: np.ndarray, Y: np.ndarray) -> "Dataset":
-        """Return a new Dataset with the same names and wavelengths."""
-        return Dataset(X, Y, self.X_names, self.Y_names, wavelengths=self._wavelengths)
+        """Return a new Dataset with the same names, wavelengths and unit."""
+        return Dataset(
+            X,
+            Y,
+            self.X_names,
+            self.Y_names,
+            wavelengths=self._wavelengths,
+            spectral_unit=self.spectral_unit,
+        )
 
     def to_dataframe(self) -> pandas.DataFrame:
         """Return the dataset as a single `pandas.DataFrame`.
@@ -712,6 +771,7 @@ class Dataset:
             [self.X_names[i] for i in idx],
             self.Y_names,
             wavelengths=None if wavelengths is None else wavelengths[idx],
+            spectral_unit=self.spectral_unit,
         )
 
     def preprocess(self, method: SpectralPreprocessingSequence) -> "Dataset":

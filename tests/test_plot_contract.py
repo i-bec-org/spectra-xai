@@ -247,3 +247,21 @@ def test_decorated_plots_keep_their_signature() -> None:
     assert "axes" in inspect.signature(PreHocAnalysis.correlogram).parameters
     assert "ax" in inspect.signature(scatter_plot).parameters
     assert PreHocAnalysis.correlogram.__doc__
+
+
+def test_style_keeps_interactive_mode_switched_on_inside_it(synthetic: Dataset) -> None:
+    # Regression: Jupyter's inline backend turns interactive mode on when the first
+    # figure is created; if that happens inside style(), restoring the old value
+    # stopped every later figure from being displayed in the notebook.
+    was_interactive = mpl.is_interactive()
+    try:
+        mpl.interactive(False)
+        with style():
+            mpl.interactive(True)  # what the inline backend does
+        assert mpl.is_interactive()
+        mpl.interactive(False)
+        with style():
+            pass
+        assert not mpl.is_interactive()
+    finally:
+        mpl.interactive(was_interactive)

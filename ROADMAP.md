@@ -10,6 +10,13 @@ Goal: make `spectraxai` more solid — consistent, sklearn-compatible interfaces
 robust and composable plots, real test coverage, feature selection, more models —
 **without breaking any code that works on v1.1.0**.
 
+## Status
+
+Phases 1–6 are implemented (see [CHANGELOG.md](CHANGELOG.md)). Still open: the
+`spectraxai[pycaret]` extra and its CI job, to be added once PyCaret 4.0 is
+released as stable (the example notebook targets the 4.0 API and was run with
+4.0.0a8).
+
 ## Ground rules
 
 | # | Decision |
@@ -19,7 +26,7 @@ robust and composable plots, real test coverage, feature selection, more models 
 | D3 | Validation errors raise `SpectraXAIValueError(ValueError, AssertionError)` so existing `except AssertionError` still catches them. |
 | D4 | Scope stays **regression only**; fix docstrings that mention classification. Keep interfaces open for classification later. |
 | D5 | Move packaging from `setup.py` to `pyproject.toml`, same dependencies (xgboost, cubist, sage remain required). New heavy deps are optional extras only. |
-| D6 | Keep Azure Pipelines. Keep committing `docs/` and regenerate it at the end of each phase. |
+| D6 | Keep Azure Pipelines (superseded: CI moved to GitHub Actions after the fork). Keep committing `docs/` and regenerate it at the end of each phase. |
 | D7 | Deliver as six phased PRs, each releasable on its own, in the order below. |
 
 ## Phase 1 — Test infrastructure and bug fixes

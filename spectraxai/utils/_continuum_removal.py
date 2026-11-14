@@ -39,6 +39,15 @@ def continuum_removal(
         if len(wvs) != len(spectrum):
             raise ValueError("wvs should have the same length as the spectrum")
 
+    # Work on increasing positions (np.interp needs them), e.g. for wavenumbers
+    # stored from high to low, and return the result in the original order.
+    order = np.argsort(wvs, kind="stable")
+    if not np.array_equal(order, np.arange(len(wvs))):
+        result = continuum_removal(spectrum[order], [wvs[i] for i in order])
+        restored = np.empty_like(result)
+        restored[order] = result
+        return restored
+
     spectrum = 1 / spectrum  # needed for absorbance
     mat = np.column_stack(
         ([wvs[0] - 1] + wvs + [wvs[-1] + 1], [0] + list(spectrum) + [0])

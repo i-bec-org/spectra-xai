@@ -29,7 +29,7 @@ training data at ``fit``, so test samples never influence it.
 from typing import Any
 
 import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.utils.validation import check_array, check_is_fitted, validate_data
 
 from spectraxai.spectra import (
@@ -40,7 +40,7 @@ from spectraxai.spectra import (
 )
 
 
-class SpectralPreprocessor(TransformerMixin, BaseEstimator):
+class SpectralPreprocessor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     """Apply a spectral pre-processing sequence as a scikit-learn transformer.
 
     Parameters

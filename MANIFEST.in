@@ -3,4 +3,4 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 include spectraxai/data/SSL_GR.csv
-include spectraxai/py.typed
+include spectraxai/py.typedinclude spectraxai/data/MIR_GB_CS2007.csv

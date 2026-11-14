@@ -32,6 +32,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager, nullcontext
 from typing import Any, ContextManager, ParamSpec, TypeVar
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
@@ -53,11 +54,21 @@ def style() -> Iterator[None]:
     """Temporarily apply the `spectraxai` matplotlib style.
 
     Figures and axes created inside the block use the style; global settings are
-    restored on exit.
+    restored on exit, except for interactive mode: notebook backends switch it on
+    when the first figure is created, and undoing that would stop later figures
+    from being displayed.
 
     """
-    with plt.style.context(STYLE):
-        yield
+    interactive: list[bool] = []
+    try:
+        with plt.style.context(STYLE):
+            try:
+                yield
+            finally:
+                interactive.append(mpl.is_interactive())
+    finally:
+        if interactive:
+            mpl.interactive(interactive[0])
 
 
 def _style_if(active: bool) -> ContextManager[Any]:

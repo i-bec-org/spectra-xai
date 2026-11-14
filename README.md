@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 <a id="readme-top"></a>
 
 
-[![Build Status](https://dev.azure.com/i-bec/spectra-xai/_apis/build/status/i-bec-org.spectra-xai?branchName=main)](https://dev.azure.com/i-bec/spectra-xai/_build/latest?definitionId=1&branchName=main)
+[![CI][ci-shield]][ci-url]
 [![Issues][issues-shield]][issues-url]
 [![License][license-shield]][license-url]
 
@@ -17,7 +17,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/i-bec-org/spectra-xai">
+  <a href="https://github.com/tsakiridis/spectra-xai">
     <img src="img/logo.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -26,14 +26,14 @@ SPDX-License-Identifier: GPL-3.0-or-later
   <p align="center">
     An awesome python library to jumpstart your AI models!
     <br />
-    <a href="https://portfolio.i-bec.org/spectraxai/spectraxai.html"><strong>Explore the docs »</strong></a>
+    <a href="https://tsakiridis.github.io/spectra-xai/spectraxai.html"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/i-bec-org/spectra-xai">View Demo</a>
+    <a href="https://github.com/tsakiridis/spectra-xai/tree/main/examples">View Examples</a>
     &middot;
-    <a href="https://github.com/i-bec-org/spectra-xai/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/tsakiridis/spectra-xai/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/i-bec-org/spectra-xai/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/tsakiridis/spectra-xai/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -56,6 +56,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
+    <li><a href="#whats-new-in-120">What's new in 1.2.0</a></li>
     <li><a href="#usage">Usage</a></li>
     <li>
       <a href="#contributing">Contributing</a>
@@ -79,10 +80,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 This library was developed to rapidly prototype and test various AI models across different spectral pre-treatments. It features:
 
-* Spectral pre-processing or pre-treatment
-* Dataset splitting into training and independent test sets
-* Model training and optimization of the algorithms' hyperparameters
-* Pre- and post-hoc explainability analysis including plotting of feature importance
+* Spectral pre-processing or pre-treatment (absorbance, SNV, MSC, Savitzky–Golay derivatives, continuum removal, detrending, ...), also as a scikit-learn transformer
+* Dataset splitting into training and independent test sets (random, Kennard–Stone, cLHS, cross-validation, stratified)
+* Model training and optimization of the algorithms' hyperparameters (PLS, SVR, RF, Cubist, XGBoost, Ridge, Lasso, Elastic Net, kNN, Gaussian processes, MLP, or any scikit-learn regressor), with scikit-learn compatible models
+* Feature (wavelength) selection: RFE/RFECV, VIP filtering and pre-hoc rankings
+* Pre- and post-hoc explainability analysis: correlograms, feature rankings, VIP, permutation importance, SAGE, SHAP, and plots of importance over the spectrum; every plot accepts a matplotlib `ax` so it can be composed into your own figures
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -118,11 +120,16 @@ sudo apt install build-essential
 
 1. On a new conda environment or virtualenv run:
    ```
-   git clone https://github.com/i-bec-org/spectra-xai
+   git clone https://github.com/tsakiridis/spectra-xai
    cd spectra-xai && pip install .
    ```
 
-2. [Optional] To install the development packages (e.g., if you want to edit this library) use:
+2. [Optional] For SHAP-based explanations install the `shap` extra:
+    ```
+    pip install .[shap]
+    ```
+
+3. [Optional] To install the development packages (e.g., if you want to edit this library) use:
     ```
     pip install -e .[dev]
     ```
@@ -131,12 +138,79 @@ sudo apt install build-essential
 
 
 
+<!-- WHAT'S NEW -->
+## What's new in 1.2.0
+
+Backwards compatible with 1.1.0, apart from the bug fixes listed in the changelog (which may change numeric results).
+
+* **scikit-learn interface**: `StandardModel` is a scikit-learn regressor and `SpectralPreprocessor` a transformer, so both work in `Pipeline`, `GridSearchCV`, `clone` and PyCaret.
+* **More models**: Ridge, Lasso, Elastic Net, kNN, Gaussian processes, MLP, or any scikit-learn regressor via `Model.CUSTOM`.
+* **Wavelength selection** (`spectraxai.selection`): `RFE`, `RFECV`, `VIPSelector` and `SelectKBest`, all working on a `Dataset`.
+* **New pre-processing**: MSC, detrending and mean centering; stateful steps such as MSC are learned on the training set only.
+* **New splits and explanations**: cLHS and quantile-stratified splits; SHAP, SAGE, PLS coefficients, and importance drawn over the mean spectrum.
+* **Plots**: every plot accepts `ax=` / `axes=` and keyword arguments, and none changes global matplotlib state.
+* **MIR spectra**: `spectral_unit="cm-1"` labels plots in wavenumbers and draws them from high to low; a bundled MIR soil dataset (`load_GB_MIR`).
+* **Reproducibility**: `random_state` on models, splits and explanations.
+* Requires Python 3.13+ and scikit-learn 1.6+.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full list, including fixes and deprecations.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Some examples of the usage of this library may be found under the [examples](examples) folder.
+A short example: compare pre-treatments for PLS on the bundled soil spectral library, keep the most informative wavelengths and plot their importance over the mean spectrum.
 
-_For more examples, please refer to the [Documentation](https://portfolio.i-bec.org/spectraxai/spectraxai.html)_
+```python
+from spectraxai.data import load_GR_SSL
+from spectraxai.dataset import DatasetSplit
+from spectraxai.explain import PostHocAnalysis
+from spectraxai.models import Model, StandardModel
+from spectraxai.selection import VIPSelector
+from spectraxai.spectra import SpectralPreprocessing as SP
+
+dataset = load_GR_SSL()
+idx_trn, idx_tst = dataset.train_test_split(DatasetSplit.KENNARD_STONE, 0.8)
+
+pls = StandardModel(Model.PLS, random_state=0)
+results = pls.fit_and_predict_multiple(
+    dataset, [SP.ABS, [SP.ABS, SP.SNV], [SP.ABS, SP.MSC]], idx_trn=idx_trn
+)
+print(results[["pre_process", "RMSE", "R2", "RPIQ"]])
+
+absorbance = dataset.preprocess(SP.ABS)
+reduced = VIPSelector(n_components=10).fit(absorbance.subset(idx_trn)).transform(absorbance)
+pls.fit(reduced.subset(idx_trn))
+PostHocAnalysis(reduced).plot_importance_spectrum(pls)
+```
+
+More examples may be found under the [examples](examples) folder:
+
+* Scripts:
+  * [quickstart.py](examples/quickstart.py): train and test a PLS model and plot its VIP over the mean spectrum
+  * [compare_pretreatments.py](examples/compare_pretreatments.py): compare spectral pre-treatments with cross-validation
+  * [select_wavelengths.py](examples/select_wavelengths.py): VIP, RFECV and correlation-based wavelength selection
+* Notebooks:
+  * [modelExamples.ipynb](examples/modelExamples.ipynb): pre-treatments, models, splits, pipelines and feature selection
+  * [modelInterpretability.ipynb](examples/modelInterpretability.ipynb): pre- and post-hoc explanations and plots
+  * [mirSpectra.ipynb](examples/mirSpectra.ipynb): mid-infrared spectra in wavenumbers (cm⁻¹), with the axis drawn from high to low
+  * [pycaretIntegration.ipynb](examples/pycaret/pycaretIntegration.ipynb): spectraxai pipelines and models inside [PyCaret](https://pycaret.org) (requires PyCaret, see the notebook)
+
+### Example datasets
+
+Two datasets are bundled (see `spectraxai.data`):
+
+* `load_GR_SSL()`: vis–NIR reflectance (350–2500 nm) and properties of Greek soils, part of the [GEO-CRADLE](http://datahub.geocradle.eu/dataset/regional-soil-spectral-library) soil spectral library.
+* `load_GB_MIR()`: MIR absorbance spectra (4000–400 cm⁻¹) of 427 soils, a subset of Keith, A.M., Dodd, B.A., Turner, G., Vane, C.H., Wood, C.M. (2020). *Soil mid-infrared spectroscopy data from arable and grassland in Countryside Survey, Great Britain 2007*. NERC EIDC, [doi:10.5285/d66ca0a6-403d-4f5a-bef1-8ee177f1e1b3](https://doi.org/10.5285/d66ca0a6-403d-4f5a-bef1-8ee177f1e1b3). Contains public sector information licensed under the Open Government Licence v3.0.
+
+For spectra in wavenumbers pass `spectral_unit="cm-1"` to `Dataset`: plots are then labelled "Wavenumber (cm⁻¹)" and drawn from high to low wavenumber.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
+_For more examples, please refer to the [Documentation](https://tsakiridis.github.io/spectra-xai/spectraxai.html)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -170,7 +244,20 @@ pre-commit run --all-files
 Tests may be run through command line by executing e.g.:
 
 ```
-pytest --ignore=examples --doctest-modules --html=report.html --cov=. --cov-report=html
+pytest --doctest-modules spectraxai tests --cov --cov-report=html
+```
+
+The fast unit tests (on synthetic spectra) can be run on their own, skipping the slower integration tests on the bundled dataset:
+
+```
+pytest -m "not slow"
+```
+
+The example notebooks are checked with:
+
+```
+pytest --nbmake --nbmake-kernel=python3 examples/*.ipynb
+for script in examples/*.py; do python "$script"; done
 ```
 
 ### Building documentation
@@ -189,7 +276,7 @@ pdoc --docformat numpy --math -o docs spectraxai
 
 This project is licensed under the terms of the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**. See the [LICENSES/](LICENSES/) directory for the full license text and additional license information.
 
-Some files (e.g., documentation) are licensed under the **Creative Commons Attribution-ShareAlike 4.0 International License (CC-BY-SA-4.0)**. These files are explicitly marked with their respective license headers.
+Some files (e.g., documentation) are licensed under the **Creative Commons Attribution-ShareAlike 4.0 International License (CC-BY-SA-4.0)**. These files are explicitly marked with their respective license headers. The bundled MIR spectra (`spectraxai/data/MIR_GB_CS2007.csv`) are licensed under the **Open Government Licence v3.0 (OGL-UK-3.0)**, see above for the required attribution.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -218,10 +305,12 @@ This library was made possible through funding from the European Union as it was
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[issues-shield]: https://img.shields.io/github/issues/i-bec-org/spectra-xai.svg
-[issues-url]: https://github.com/i-bec-org/spectra-xai/issues
+[ci-shield]: https://github.com/tsakiridis/spectra-xai/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/tsakiridis/spectra-xai/actions/workflows/ci.yml
+[issues-shield]: https://img.shields.io/github/issues/tsakiridis/spectra-xai.svg
+[issues-url]: https://github.com/tsakiridis/spectra-xai/issues
 [license-shield]: https://img.shields.io/badge/license-GPLv3-blue
-[license-url]: https://github.com/i-bec-org/spectra-xai/blob/master/LICENSE.txt
+[license-url]: https://github.com/tsakiridis/spectra-xai/blob/main/LICENSES/GPL-3.0-or-later.txt
 [Scikit-shield]: https://img.shields.io/badge/scikit%20learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white
 [Scikit-url]: https://github.com/scikit-learn/scikit-learn
 [Numpy-shield]: https://img.shields.io/badge/Numpy-777BB4?style=for-the-badge&logo=numpy&logoColor=fff

@@ -6,10 +6,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Changelog
 
-All notable changes to this project are documented here. See
-[ROADMAP.md](ROADMAP.md) for the plan towards 1.2.0.
+All notable changes to this project are documented here. The decisions behind
+1.2.0 are in [ROADMAP.md](https://github.com/tsakiridis/spectra-xai/blob/main/ROADMAP.md).
 
-## [Unreleased] — 1.2.0
+## [1.2.0] — 2026-11-14
 
 ### Added
 - `spectraxai.exceptions.SpectraXAIValueError`, raised for invalid arguments. It
@@ -106,6 +106,28 @@ All notable changes to this project are documented here. See
   permutation explainer) and `plot_shap_summary(explanation_or_model, ax=...)`
   (mean |SHAP| per wavelength).
 
+- `SpectralPreprocessor` supports `get_feature_names_out` and
+  `set_output(transform="pandas")`.
+- **Documentation and examples**: a new
+  [PyCaret example](https://github.com/tsakiridis/spectra-xai/blob/main/examples/pycaret/pycaretIntegration.ipynb) (PyCaret 4.0
+  `RegressionExperiment` with spectraxai pipelines and `StandardModel`); the example
+  notebooks cover the new models, pipelines, stateful pre-processing, feature
+  selection, cLHS and the new plots; README and package quickstart updated.
+
+- **Mid-infrared spectra.** `Dataset(..., spectral_unit="cm-1")` (also `"nm"`,
+  `"um"`; new `spectral_unit`, `is_wavenumber` and `spectral_label` attributes,
+  kept by `subset`, `preprocess` and `select_features`). Spectral plots are
+  labelled "Wavenumber (cm⁻¹)" and drawn from high to low wavenumber whatever
+  the column order, including bar plots; the default (no unit) is unchanged.
+  `load_GR_SSL` now sets `spectral_unit="nm"` (axes read "Wavelength (nm)").
+- `spectraxai.data.load_GB_MIR()`: MIR absorbance spectra (4000–400 cm⁻¹) of 427
+  soils of the Countryside Survey of Great Britain 2007 (Keith et al., 2020,
+  Open Government Licence v3.0), stored from high to low wavenumber.
+- `excluded_bands` pairs may be given in either order, e.g. `(2400, 2280)`.
+- New example scripts with descriptive names: `quickstart.py` and
+  `compare_pretreatments.py` (formerly `example2.py` and `example1.py`) and
+  `select_wavelengths.py`; new `mirSpectra.ipynb` notebook.
+
 ### Changed (models)
 - `fit_and_predict` fits the pre-processing on the training samples and applies
   it to the test samples. For stateless pre-processing the results are identical
@@ -156,9 +178,19 @@ These fixes may change numeric results compared to 1.1.0.
 - `PostHocAnalysis.bar_plot_permutation_importance` labelled the y axis "Mean
   decrease in impurity"; it is now "Mean decrease in score".
 - `continuum_removal` ignored `wvs` for 2-D inputs.
+- `continuum_removal` gave wrong results for wavelengths stored in decreasing
+  order (e.g. MIR wavenumbers from 4000 to 400 cm⁻¹).
+- In Jupyter, when the first figure of a session was created by a spectraxai plot,
+  no later figure was displayed (`spectraxai.plotting.style()` now keeps the
+  interactive mode that the notebook backend switches on).
 - `Spectra.preprocess` silently returned `None` for unknown methods; it now raises.
 
 ### Changed
+- Project URLs (README, package metadata) point to
+  https://github.com/tsakiridis/spectra-xai and its GitHub Pages documentation.
 - Packaging moved from `setup.py` to `pyproject.toml` (same dependencies).
 - Tests run with pytest, with fast synthetic fixtures; the SSL-based model tests
   are marked `slow`. CI also runs flake8, black, pyright and the examples.
+- CI moved from Azure Pipelines to GitHub Actions (`.github/workflows/ci.yml`):
+  tests on Python 3.13–3.15, lint and type checks, REUSE licensing, and the
+  example scripts and notebooks.
